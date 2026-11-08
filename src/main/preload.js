@@ -2,6 +2,32 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
+const call = (channel) => (...args) => ipcRenderer.invoke(channel, ...args);
+
 contextBridge.exposeInMainWorld('api', {
-  getPaperCatalog: () => ipcRenderer.invoke('paper:catalog')
+  getPaperCatalog: call('paper:catalog'),
+  getServiceTypes: call('presets:serviceTypes'),
+  orgs: {
+    list: call('orgs:list'),
+    create: call('orgs:create'),
+    update: call('orgs:update'),
+    delete: call('orgs:delete')
+  },
+  assets: {
+    list: call('assets:list'),
+    data: call('assets:data'),
+    pick: call('assets:pick'),
+    delete: call('assets:delete')
+  },
+  templates: {
+    list: call('templates:list'),
+    create: call('templates:create'),
+    update: call('templates:update'),
+    duplicate: call('templates:duplicate'),
+    delete: call('templates:delete')
+  },
+  settings: {
+    get: call('settings:get'),
+    set: call('settings:set')
+  }
 });

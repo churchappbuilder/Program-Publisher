@@ -4,7 +4,8 @@
   "description": "Free, offline bulletin publishing tool for churches and schools.",
   "main": "src/main/main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "test": "node --test test/"
   },
   "repository": {
     "type": "git",
@@ -13,7 +14,7 @@
   "license": "GPL-3.0-or-later",
   "author": "churchappbuilder",
   "devDependencies": {
-    "electron": "^33.0.0"
+    "electron": "^45.2.3"
   },
   "allowScripts": {
     "electron@33.4.11": true

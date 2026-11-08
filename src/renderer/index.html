@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Bulletin Formatter</title>
   <link rel="stylesheet" href="styles.css">
@@ -11,35 +11,93 @@
   <aside class="sidebar">
     <h1>Bulletin Formatter</h1>
 
-    <label>Organization name
-      <input id="orgName" type="text" value="Grace Community Church">
-    </label>
-    <label>Bulletin title
-      <input id="title" type="text" value="Sunday Morning Worship">
-    </label>
-    <label>Date
-      <input id="date" type="text" value="Sunday, January 4, 2026">
-    </label>
+    <div class="row">
+      <label class="grow">Organization
+        <select id="orgSelect"></select>
+      </label>
+      <button id="orgManage" class="btn" title="Edit this organization">Edit</button>
+      <button id="orgNew" class="btn" title="Add an organization">+</button>
+    </div>
 
-    <hr>
-    <label>Paper format
-      <select id="format"></select>
-    </label>
-    <p id="formatNote" class="hint"></p>
-    <label>Paper color
-      <select id="color"></select>
-    </label>
-    <label>Paper weight
-      <select id="weight"></select>
-    </label>
+    <h3>Templates</h3>
+    <select id="tplSelect" size="5" class="list"></select>
+    <div class="row">
+      <select id="tplNewType" class="grow"></select>
+      <button id="tplNew" class="btn">New</button>
+    </div>
+    <div class="row">
+      <button id="tplDup" class="btn grow">Duplicate</button>
+      <button id="tplDel" class="btn danger grow">Delete</button>
+    </div>
+
+    <div id="editor">
+      <h3>Content</h3>
+      <label>Template name <input id="tplName" type="text"></label>
+      <label>Title <input id="title" type="text"></label>
+      <label>Subtitle <input id="subtitle" type="text"></label>
+      <label>Date <input id="date" type="text" placeholder="Sunday, January 4, 2026"></label>
+      <label>Order of service (one per line)
+        <textarea id="items" rows="8"></textarea>
+      </label>
+
+      <h3>Paper</h3>
+      <label>Format <select id="format"></select></label>
+      <p id="formatNote" class="hint"></p>
+      <label>Color <select id="color"></select></label>
+      <label>Weight <select id="weight"></select></label>
+    </div>
   </aside>
 
   <main class="stage">
+    <div id="empty" class="empty" hidden>Create an organization to get started.</div>
     <div id="sheetWrap">
       <div id="sheet"></div>
     </div>
     <p id="sizeLabel" class="hint"></p>
+    <p id="fitWarn" class="warn" hidden>Some text doesn't fit. Shorten it or choose a bigger format.</p>
   </main>
+
+  <dialog id="orgDialog">
+    <form method="dialog" id="orgForm">
+      <h2 id="orgDialogTitle">Organization</h2>
+      <div class="grid2">
+        <label>Name <input id="o_name" type="text" required></label>
+        <label>Tagline <input id="o_tagline" type="text"></label>
+        <label>Address <input id="o_address" type="text"></label>
+        <label>Phone <input id="o_phone" type="text"></label>
+        <label>Website <input id="o_website" type="text"></label>
+        <label>Email <input id="o_email" type="text"></label>
+        <label>Main color <input id="o_primary" type="color"></label>
+        <label>Accent color <input id="o_accent" type="color"></label>
+        <label>Heading font <select id="o_headingFont"></select></label>
+        <label>Body font <select id="o_bodyFont"></select></label>
+        <label>Default format <select id="o_format"></select></label>
+        <label>Default paper color <select id="o_color"></select></label>
+      </div>
+
+      <div class="assets">
+        <div>
+          <h3>Logo</h3>
+          <div id="logoPreview" class="logoBox">No logo</div>
+          <button type="button" id="logoPick" class="btn">Choose logo…</button>
+          <button type="button" id="logoClear" class="btn">Remove</button>
+        </div>
+        <div>
+          <h3>Fonts</h3>
+          <ul id="fontList" class="fontList"></ul>
+          <button type="button" id="fontPick" class="btn">Add font…</button>
+        </div>
+      </div>
+      <p id="orgError" class="warn" hidden></p>
+
+      <div class="row end">
+        <button type="button" id="orgDelete" class="btn danger">Delete organization</button>
+        <span class="grow"></span>
+        <button type="button" id="orgCancel" class="btn">Cancel</button>
+        <button type="submit" id="orgSave" class="btn primary">Save</button>
+      </div>
+    </form>
+  </dialog>
 
   <script src="app.js"></script>
 </body>
