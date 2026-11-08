@@ -105,3 +105,47 @@ test('all service-type presets parse without producing empty output', () => {
     assert.ok(blocks.every((b) => b.pageBreak || b.html), s.id);
   }
 });
+
+test('next week: clears details on item lines but keeps structure', () => {
+  const out = Layout.clearWeekly([
+    '# Gathering',
+    '+ Opening Hymn | Holy, Holy, Holy | 77',
+    'Sermon | | Pastor Smith',
+    'Prelude |',
+    'Leader: The Lord be with you.',
+    '> Please stand.',
+    '- Potluck | Sunday',
+    'Plain paragraph with no pipe.'
+  ].join('\n')).split('\n');
+  assert.strictEqual(out[0], '# Gathering');
+  assert.strictEqual(out[1], '+ Opening Hymn |');
+  assert.strictEqual(out[2], 'Sermon |');
+  assert.strictEqual(out[3], 'Prelude |');
+  assert.strictEqual(out[4], 'Leader: The Lord be with you.');
+  assert.strictEqual(out[5], '> Please stand.');
+  assert.strictEqual(out[6], '- Potluck | Sunday'); // bullets are untouched
+  assert.strictEqual(out[7], 'Plain paragraph with no pipe.');
+});
+
+test('inserts: a flat format matching one finished bulletin page is found', () => {
+  const id = (f) => Layout.insertFormatId(FORMATS, fmt(f));
+  assert.strictEqual(id('letter-bifold'), 'half-letter');   // 5.5 x 8.5
+  assert.strictEqual(id('tabloid-bifold'), 'letter');       // 8.5 x 11
+  assert.strictEqual(id('legal-bifold'), 'insert-7x8');     // 7 x 8.5
+  assert.strictEqual(id('letter-trifold'), 'insert-panel'); // 3.67 x 8.5
+  assert.strictEqual(id('a4-bifold'), 'a5');
+  assert.strictEqual(id('letter'), 'letter');               // flat insert = same size
+});
+
+test('built-in texts all parse and have names and sources', () => {
+  const { BUILTIN_TEXTS } = require('../src/shared/texts');
+  const ids = new Set();
+  for (const t of BUILTIN_TEXTS) {
+    assert.ok(t.id && t.name && t.group && t.source && t.body.trim().length > 20, t.id);
+    assert.ok(!ids.has(t.id), 'duplicate id ' + t.id);
+    ids.add(t.id);
+    assert.ok(Layout.parseBody(t.body).length > 0, t.id);
+  }
+  assert.ok(BUILTIN_TEXTS.some((t) => /Apostles/.test(t.name)));
+  assert.ok(BUILTIN_TEXTS.some((t) => /Nicene/.test(t.name)));
+});

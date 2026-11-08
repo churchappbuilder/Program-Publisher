@@ -11,6 +11,8 @@ const state = {
   templates: [],
   tpl: null,          // current template
   fonts: [],          // uploaded font assets for current org
+  texts: [],          // the current church's saved texts
+  builtin: [],        // built-in public-domain texts
   logoUrl: null,      // data URL of current org's logo
   side: 0,            // which side of the sheet the preview shows (0 outside, 1 inside)
   dialogOrgId: null   // org being edited in the dialog (null = new)
@@ -88,7 +90,8 @@ function currentContent() {
     title: $('title').value,
     subtitle: $('subtitle').value,
     date: $('date').value,
-    body: $('body').value
+    body: $('body').value,
+    plain: !!(state.tpl && state.tpl.content && state.tpl.content.plain) // inserts have no cover header
   };
 }
 
@@ -158,6 +161,7 @@ function fillEditor(tpl) {
   $('date').value = tpl.content.date || '';
   $('body').value = Layout.normContent(tpl.content).body; // older templates are converted on the fly
   state.side = 0;
+  $('editor').classList.toggle('isInsert', !!tpl.content.plain);
   $('format').value = tpl.format_id;
   $('color').value = tpl.color_id;
   $('weight').value = tpl.weight_id;
@@ -195,6 +199,95 @@ const saveTemplate = debounce(async () => {
 
 function onEdit() { render(); saveTemplate(); }
 
+// ---------- text library ----------
+
+function refreshTextSelect() {
+  const sel = $('textSelect');
+  sel.innerHTML = '';
+  const add = (parent, value, label) => {
+    const o = document.createElement('option');
+    o.value = value; o.textContent = label; parent.appendChild(o);
+  };
+  if (state.texts.length) {
+    const g = document.createElement('optgroup');
+    g.label = "Your church's texts";
+    for (const t of state.texts) add(g, 'org:' + t.id, t.name);
+    sel.appendChild(g);
+  }
+  const groups = [...new Set(state.builtin.map((t) => t.group))];
+  for (const name of groups) {
+    const g = document.createElement('optgroup');
+    g.label = name + ' (built-in)';
+    for (const t of state.builtin.filter((x) => x.group === name)) add(g, 'bi:' + t.id, t.name);
+    sel.appendChild(g);
+  }
+}
+
+function findText(value) {
+  const [kind, id] = String(value).split(':');
+  if (kind === 'org') return state.texts.find((t) => t.id === Number(id)) || null;
+  return state.builtin.find((t) => t.id === id) || null;
+}
+
+// Put text into the body at the cursor, separated from its neighbors by blank lines.
+function insertIntoBody(text) {
+  const ta = $('body');
+  const before = ta.value.slice(0, ta.selectionStart).replace(/\n*$/, '');
+  const after = ta.value.slice(ta.selectionEnd).replace(/^\n*/, '');
+  const head = before ? before + '\n\n' : '';
+  ta.value = head + text.trim() + (after ? '\n\n' + after : '\n');
+  const caret = (head + text.trim()).length + 1;
+  ta.focus();
+  ta.setSelectionRange(caret, caret);
+  onEdit();
+}
+
+const tl = { id: null }; // id of the church text being edited in the library dialog (null = new)
+
+function tlMessage(msg) {
+  $('tl_msg').textContent = msg || '';
+  $('tl_msg').hidden = !msg;
+}
+
+function tlFill(t) {
+  tl.id = t ? t.id : null;
+  $('tl_name').value = t ? t.name : '';
+  $('tl_body').value = t ? t.body : '';
+  $('tl_list').value = t ? String(t.id) : '';
+}
+
+async function tlRefresh(selectId) {
+  state.texts = await window.api.texts.list(state.org.id);
+  const list = $('tl_list');
+  list.innerHTML = '';
+  for (const t of state.texts) {
+    const o = document.createElement('option');
+    o.value = t.id; o.textContent = t.name; list.appendChild(o);
+  }
+  refreshTextSelect();
+  tlFill(state.texts.find((t) => t.id === selectId) || null);
+}
+
+function cleanError(e) {
+  return String(e && e.message || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
+}
+
+async function openTextLibrary() {
+  if (!state.org) return;
+  const sel = $('body').value.slice($('body').selectionStart, $('body').selectionEnd);
+  tlMessage('');
+  const bi = $('tl_builtin');
+  bi.innerHTML = '';
+  for (const t of state.builtin) {
+    const o = document.createElement('option');
+    o.value = t.id; o.textContent = t.name; bi.appendChild(o);
+  }
+  $('tl_source').textContent = state.builtin.length ? 'Source: ' + state.builtin[0].source : '';
+  await tlRefresh();
+  if (sel.trim()) $('tl_body').value = sel.trim(); // start a new text from the highlighted lines
+  $('textDialog').showModal();
+}
+
 // ---------- organizations ----------
 
 async function selectOrg(id) {
@@ -204,9 +297,11 @@ async function selectOrg(id) {
     $('orgSelect').value = state.org.id;
     await loadOrgFonts(state.org.id);
     await loadLogo(state.org);
+    state.texts = await window.api.texts.list(state.org.id);
   } else {
-    state.fonts = []; state.logoUrl = null;
+    state.fonts = []; state.logoUrl = null; state.texts = [];
   }
+  refreshTextSelect();
   $('orgManage').disabled = !state.org;
   await refreshTemplates();
 }
@@ -326,6 +421,7 @@ async function pickAsset(kind) {
 async function init() {
   state.catalog = await window.api.getPaperCatalog();
   state.serviceTypes = await window.api.getServiceTypes();
+  state.builtin = await window.api.texts.builtin();
   fillSelect($('format'), state.catalog.formats);
   fillSelect($('color'), state.catalog.colors);
   fillSelect($('weight'), state.catalog.weights);
@@ -334,6 +430,78 @@ async function init() {
   for (const id of ['tplName', 'title', 'subtitle', 'date', 'body', 'format', 'color', 'weight']) {
     $(id).addEventListener('input', onEdit);
   }
+  // Text library
+  $('textInsert').onclick = () => {
+    const t = findText($('textSelect').value);
+    if (t) insertIntoBody(t.body);
+  };
+  $('textManage').onclick = openTextLibrary;
+  $('tl_close').onclick = () => $('textDialog').close();
+  $('tl_list').addEventListener('change', () => {
+    tlMessage('');
+    tlFill(state.texts.find((t) => t.id === Number($('tl_list').value)) || null);
+  });
+  $('tl_new').onclick = () => { tlMessage(''); tlFill(null); $('tl_name').focus(); };
+  $('tl_builtin').addEventListener('change', () => {
+    const t = state.builtin.find((x) => x.id === $('tl_builtin').value);
+    $('tl_source').textContent = t ? 'Source: ' + t.source : '';
+  });
+  $('tl_copy').onclick = async () => {
+    const t = state.builtin.find((x) => x.id === $('tl_builtin').value);
+    if (!t) return;
+    try {
+      const made = await window.api.texts.create(state.org.id, { name: t.name, body: t.body });
+      tlMessage('');
+      await tlRefresh(made.id);
+    } catch (e) { tlMessage(cleanError(e)); }
+  };
+  $('tl_sel').onclick = () => {
+    const ta = $('body');
+    const s = ta.value.slice(ta.selectionStart, ta.selectionEnd).trim();
+    if (!s) { tlMessage('Highlight some lines in the bulletin body first, then open the library.'); return; }
+    tlMessage('');
+    $('tl_body').value = s;
+  };
+  $('tl_save').onclick = async () => {
+    try {
+      const data = { name: $('tl_name').value, body: $('tl_body').value };
+      const saved = tl.id ? await window.api.texts.update(tl.id, data) : await window.api.texts.create(state.org.id, data);
+      tlMessage('');
+      await tlRefresh(saved.id);
+    } catch (e) { tlMessage(cleanError(e)); }
+  };
+  $('tl_del').onclick = async () => {
+    const t = state.texts.find((x) => x.id === tl.id);
+    if (!t || !confirm(`Delete "${t.name}" from your church's library? Bulletins that already contain it are not changed.`)) return;
+    await window.api.texts.delete(t.id);
+    await tlRefresh();
+  };
+
+  // Weekly workflow
+  $('tplNext').onclick = async () => {
+    if (!state.tpl) return;
+    await saveTemplate.flush();
+    const src = state.tpl;
+    const copy = await window.api.templates.duplicate(src.id);
+    const content = { ...src.content, date: '', body: Layout.clearWeekly(Layout.normContent(src.content).body) };
+    const made = await window.api.templates.update(copy.id, { name: `${src.name} (new week)`, content });
+    await refreshTemplates(made.id);
+  };
+  $('tplInsert').onclick = async () => {
+    if (!state.tpl) return;
+    await saveTemplate.flush();
+    const src = state.tpl;
+    const fmt = state.catalog.formats.find((x) => x.id === src.format_id);
+    const formatId = Layout.insertFormatId(state.catalog.formats, fmt) || 'half-letter';
+    const t = await window.api.templates.create(state.org.id, 'general');
+    const made = await window.api.templates.update(t.id, {
+      name: `Insert for ${src.name}`, service_type: 'insert', format_id: formatId,
+      color_id: src.color_id, weight_id: src.weight_id,
+      content: { title: '', subtitle: '', date: '', plain: true, body: '' }
+    });
+    await refreshTemplates(made.id);
+  };
+
   $('stepPrev').onclick = () => { state.side -= 1; render(); };
   $('stepNext').onclick = () => { state.side += 1; render(); };
   // Insert-snippet buttons: put the sample text on its own line at the cursor.

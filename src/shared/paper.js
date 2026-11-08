@@ -8,6 +8,8 @@ const FORMATS = [
   { id: 'letter', name: 'Letter (8.5 × 11)', width: 8.5, height: 11, panels: 1, note: 'Standard US letter, flat.' },
   { id: 'legal', name: 'Legal (8.5 × 14)', width: 8.5, height: 14, panels: 1, note: 'Legal, flat.' },
   { id: 'tabloid', name: 'Tabloid (11 × 17)', width: 11, height: 17, panels: 1, note: 'Ledger/tabloid, flat.' },
+  { id: 'insert-7x8', name: 'Insert 7 × 8.5 (matches a legal bi-fold page)', width: 7, height: 8.5, panels: 1, note: 'Loose insert sized to a legal bi-fold page.' },
+  { id: 'insert-panel', name: 'Insert 3.67 × 8.5 (matches a tri-fold panel)', width: 11 / 3, height: 8.5, panels: 1, note: 'Loose insert sized to one tri-fold panel.' },
   { id: 'a4', name: 'A4 (210 × 297 mm)', width: 8.27, height: 11.69, panels: 1, note: 'International standard.' },
   { id: 'a5', name: 'A5 (148 × 210 mm)', width: 5.83, height: 8.27, panels: 1, note: 'Half of A4.' },
   { id: 'letter-bifold', name: 'Letter bi-fold booklet (folds to 5.5 × 8.5)', width: 11, height: 8.5, panels: 2, note: 'Letter sheets folded in half. Grows in steps of 4 pages (4, 8, 12 …), stapled in the middle.' },

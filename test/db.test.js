@@ -86,3 +86,19 @@ test('settings and migration version persist across reopen', () => {
   db.close();
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test('text library: per-organization texts, update, delete, cascade', () => {
+  const { db, dir } = tempDb();
+  const a = db.createOrg({ name: 'A' });
+  const b = db.createOrg({ name: 'B' });
+  const t = db.createText(a.id, { name: "Apostles' Creed (our wording)", body: 'I believe...' });
+  db.createText(b.id, { name: 'Other', body: 'x' });
+  assert.strictEqual(db.listTexts(a.id).length, 1);
+  assert.strictEqual(db.updateText(t.id, { name: 'Creed', body: 'changed' }).body, 'changed');
+  assert.throws(() => db.createText(a.id, { name: ' ', body: 'x' }));
+  db.deleteOrg(a.id);
+  assert.strictEqual(db.listTexts(a.id).length, 0);
+  assert.strictEqual(db.listTexts(b.id).length, 1);
+  db.close();
+  fs.rmSync(dir, { recursive: true, force: true });
+});

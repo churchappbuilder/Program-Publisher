@@ -87,8 +87,32 @@
       title: c.title || '',
       subtitle: c.subtitle || '',
       date: c.date || '',
-      body: c.body != null ? String(c.body) : legacyBody(c)
+      body: c.body != null ? String(c.body) : legacyBody(c),
+      plain: !!c.plain // an insert: just the text, no cover header or page numbers
     };
+  }
+
+  // "Next week": keep the structure of a service but blank what changes weekly.
+  // On order-of-service lines everything after the first | is dropped
+  // (hymn numbers, scripture passages, who is preaching). Everything else is kept.
+  function clearWeekly(text) {
+    return String(text || '').split('\n').map((line) => {
+      const t = line.trim();
+      if (!t || /^(#|>|-|\^|\[|={3,})/.test(t)) return line;
+      const m = t.match(/^(\+\s+)?(.*)$/);
+      const rest = m[2];
+      if (ROLE_RE.test(rest) || !rest.includes('|')) return line;
+      return (m[1] || '') + rest.split('|')[0].trim() + ' |';
+    }).join('\n');
+  }
+
+  // The flat paper format whose size equals one finished page of this format
+  // (so an insert fits inside the bulletin). null if the catalog has none.
+  function insertFormatId(formats, format) {
+    const g = geometry(format);
+    const f = formats.find((x) => (x.panels || 1) === 1 &&
+      Math.abs(x.width - g.pageW) < 0.03 && Math.abs(x.height - g.pageH) < 0.03);
+    return f ? f.id : null;
   }
 
   // ---------- body markup ----------
@@ -235,7 +259,7 @@
     const content = normContent(ctx.content);
     const c = { ...ctx, content };
     const blocks = parseBody(content.body);
-    const head = geo.kind === 'flat' ? `<div class="head">${headBlock(c, content)}</div>` : '';
+    const head = geo.kind === 'flat' && !content.plain ? `<div class="head">${headBlock(c, content)}</div>` : '';
 
     // Measure at a fixed scale so pagination never depends on the window size.
     const sheet = doc.createElement('div');
@@ -285,7 +309,7 @@
 
     if (geo.kind === 'flat') {
       done.forEach((list, i) => {
-        pages.push({ role: i === 0 ? 'head-flow' : 'flow', panel: panel(i === 0 ? 'head-flow' : 'flow', i === 0 ? 'flow head-flow' : 'flow', (i === 0 ? head : '') + flowHtml(list), { fit: false, num: i + 1 }) });
+        pages.push({ role: i === 0 ? 'head-flow' : 'flow', panel: panel(i === 0 ? 'head-flow' : 'flow', i === 0 ? 'flow head-flow' : 'flow', (i === 0 ? head : '') + flowHtml(list), { fit: false, num: content.plain ? 0 : i + 1 }) });
       });
     } else {
       const flow = done.length === 1 && done[0].length === 0 ? [] : done;
@@ -332,5 +356,5 @@
     return overflow;
   }
 
-  return { PX_PER_IN, EM_IN, geometry, impose, normContent, parseBody, paginate, sideHtml, pageHtml, fitAll, setVars, esc };
+  return { PX_PER_IN, EM_IN, geometry, impose, normContent, clearWeekly, insertFormatId, parseBody, paginate, sideHtml, pageHtml, fitAll, setVars, esc };
 });

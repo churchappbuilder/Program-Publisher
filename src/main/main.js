@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { FORMATS, WEIGHTS, COLORS } = require('../shared/paper');
 const { SERVICE_TYPES } = require('../shared/presets');
+const { BUILTIN_TEXTS } = require('../shared/texts');
 const { open } = require('./db');
 
 let db;
@@ -170,6 +171,12 @@ function registerIpc() {
   ipcMain.handle('templates:update', (_e, id, data) => db.updateTemplate(id, data));
   ipcMain.handle('templates:duplicate', (_e, id) => db.duplicateTemplate(id));
   ipcMain.handle('templates:delete', (_e, id) => db.deleteTemplate(id));
+
+  ipcMain.handle('texts:builtin', () => BUILTIN_TEXTS);
+  ipcMain.handle('texts:list', (_e, orgId) => db.listTexts(orgId));
+  ipcMain.handle('texts:create', (_e, orgId, data) => db.createText(orgId, data));
+  ipcMain.handle('texts:update', (_e, id, data) => db.updateText(id, data));
+  ipcMain.handle('texts:delete', (_e, id) => db.deleteText(id));
 
   ipcMain.handle('settings:get', (_e, key) => db.getSetting(key));
   ipcMain.handle('settings:set', (_e, key, value) => db.setSetting(key, value));

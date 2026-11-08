@@ -55,6 +55,18 @@ const MIGRATIONS = [
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   );
+  `,
+  // v2: a library of reusable texts (creeds, catechism questions, a church's own wording…)
+  `
+  CREATE TABLE org_texts (
+    id INTEGER PRIMARY KEY,
+    org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    body TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX org_texts_org ON org_texts(org_id);
   `
 ];
 
@@ -180,6 +192,26 @@ function open(file) {
     },
     deleteTemplate(id) {
       db.prepare('DELETE FROM templates WHERE id = ?').run(id);
+    },
+
+    // ---- text library (per organization) ----
+    listTexts: (orgId) =>
+      db.prepare('SELECT id, org_id, name, body FROM org_texts WHERE org_id = ? ORDER BY name COLLATE NOCASE').all(orgId).map(plain),
+    getText: (id) => plain(db.prepare('SELECT id, org_id, name, body FROM org_texts WHERE id = ?').get(id)),
+    createText(orgId, data) {
+      const name = String(data.name || '').trim();
+      if (!name) throw new Error('A text needs a name.');
+      const r = db.prepare('INSERT INTO org_texts (org_id, name, body) VALUES (?,?,?)').run(orgId, name, String(data.body || ''));
+      return api.getText(Number(r.lastInsertRowid));
+    },
+    updateText(id, data) {
+      const name = String(data.name || '').trim();
+      if (!name) throw new Error('A text needs a name.');
+      db.prepare('UPDATE org_texts SET name = ?, body = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(name, String(data.body || ''), id);
+      return api.getText(id);
+    },
+    deleteText(id) {
+      db.prepare('DELETE FROM org_texts WHERE id = ?').run(id);
     },
 
     // ---- settings ----

@@ -30,14 +30,23 @@
       <button id="tplDup" class="btn grow">Duplicate</button>
       <button id="tplDel" class="btn danger grow">Delete</button>
     </div>
+    <div class="row">
+      <button id="tplNext" class="btn grow" title="Copy this template for a new week, clearing the date, hymn numbers and readings">Next week</button>
+      <button id="tplInsert" class="btn grow" title="Create a loose insert page sized to fit inside this bulletin">Add insert</button>
+    </div>
 
     <div id="editor">
       <h3>Content</h3>
       <label>Template name <input id="tplName" type="text"></label>
-      <label>Title <input id="title" type="text"></label>
-      <label>Subtitle <input id="subtitle" type="text"></label>
-      <label>Date <input id="date" type="text" placeholder="Sunday, January 4, 2026"></label>
+      <label class="coverField">Title <input id="title" type="text"></label>
+      <label class="coverField">Subtitle <input id="subtitle" type="text"></label>
+      <label class="coverField">Date <input id="date" type="text" placeholder="Sunday, January 4, 2026"></label>
       <label for="body">Body: the service, readings, announcements</label>
+      <div class="row textRow">
+        <select id="textSelect" class="grow" title="Texts to insert"></select>
+        <button type="button" id="textInsert" class="btn">Insert</button>
+        <button type="button" id="textManage" class="btn" title="Your church's text library">Library…</button>
+      </div>
       <div class="snips" id="snips">
         <button type="button" class="btn small" data-snip="# Section heading">Section</button>
         <button type="button" class="btn small" data-snip="Hymn | Title | Number">Hymn</button>
@@ -100,6 +109,34 @@ Plain lines make a paragraph; line breaks are kept.</pre>
     <p id="sizeLabel" class="hint"></p>
     <p id="fitWarn" class="warn" hidden>Some text doesn't fit. Shorten it or choose a bigger format.</p>
   </main>
+
+  <dialog id="textDialog">
+    <form method="dialog" id="textForm">
+      <h2>Text library</h2>
+      <p class="hint">Save the exact wording your church uses (a creed, a catechism question, a confession) so every bulletin and insert uses the same text. Built-in texts are traditional public-domain wording; copy one to edit it for your church.</p>
+      <div class="grid2">
+        <div>
+          <h3>Your church's texts</h3>
+          <select id="tl_list" size="9" class="list"></select>
+          <div class="row"><button type="button" id="tl_new" class="btn grow">New</button><button type="button" id="tl_del" class="btn danger grow">Delete</button></div>
+          <h3>Built-in (public domain)</h3>
+          <select id="tl_builtin"></select>
+          <div class="row"><button type="button" id="tl_copy" class="btn grow">Copy to my texts</button></div>
+          <p id="tl_source" class="hint"></p>
+        </div>
+        <div>
+          <label>Name <input id="tl_name" type="text"></label>
+          <label>Text <textarea id="tl_body" rows="15" class="mono"></textarea></label>
+          <div class="row">
+            <button type="button" id="tl_sel" class="btn grow" title="Fill the text box from what you have highlighted in the bulletin body">Use highlighted text</button>
+            <button type="button" id="tl_save" class="btn primary grow">Save</button>
+          </div>
+        </div>
+      </div>
+      <p id="tl_msg" class="warn" hidden></p>
+      <div class="row end"><span class="grow"></span><button type="button" id="tl_close" class="btn">Close</button></div>
+    </form>
+  </dialog>
 
   <dialog id="orgDialog">
     <form method="dialog" id="orgForm">

@@ -26,6 +26,13 @@ contextBridge.exposeInMainWorld('api', {
     duplicate: call('templates:duplicate'),
     delete: call('templates:delete')
   },
+  texts: {
+    builtin: call('texts:builtin'),
+    list: call('texts:list'),
+    create: call('texts:create'),
+    update: call('texts:update'),
+    delete: call('texts:delete')
+  },
   exportPdf: call('export:pdf'),
   print: {
     getJob: call('print:getJob'),

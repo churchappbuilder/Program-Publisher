@@ -83,3 +83,11 @@ details.help { margin: 6px 0 12px; font-size: 12px; color: #4a505a; }
 details.help summary { cursor: pointer; font-weight: 600; }
 details.help pre { margin: 6px 0 0; padding: 8px; background: #eceef2; border-radius: 6px; font-size: 11px; line-height: 1.5; overflow-x: auto; }
 .stepLabel { color: #fff; font-size: 13px; padding: 5px 14px; min-width: 190px; text-align: center; align-self: center; }
+
+/* ----- text library, inserts ----- */
+.textRow { margin: 4px 0 6px; align-items: center; }
+.textRow select { margin-top: 0; }
+.textRow .btn { margin-bottom: 0; }
+.isInsert .coverField { display: none; }
+#textDialog { width: 820px; }
+#textDialog textarea { margin-top: 4px; }
