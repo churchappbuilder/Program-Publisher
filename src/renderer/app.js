@@ -13,6 +13,7 @@ const state = {
   fonts: [],          // uploaded font assets for current org
   texts: [],          // the current church's saved texts
   builtin: [],        // built-in public-domain texts
+  catechisms: [],     // available catechisms
   logoUrl: null,      // data URL of current org's logo
   side: 0,            // which side of the sheet the preview shows (0 outside, 1 inside)
   dialogOrgId: null   // org being edited in the dialog (null = new)
@@ -422,6 +423,28 @@ async function init() {
   state.catalog = await window.api.getPaperCatalog();
   state.serviceTypes = await window.api.getServiceTypes();
   state.builtin = await window.api.texts.builtin();
+  $('version').textContent = 'Version ' + await window.api.version();
+
+  // Catechism picker
+  state.catechisms = await window.api.catechism.list();
+  fillSelect($('catSelect'), state.catechisms);
+  const showCatNote = () => {
+    const c = state.catechisms.find((x) => x.id === $('catSelect').value);
+    $('catNote').textContent = c ? `${c.count} questions. ${c.source}${c.caution ? ' Note: ' + c.caution : ''}` : '';
+    $('catTo').max = $('catFrom').max = c ? c.count : '';
+  };
+  $('catSelect').addEventListener('change', showCatNote);
+  showCatNote();
+  $('catInsert').onclick = async () => {
+    const msg = $('catNote');
+    try {
+      const text = await window.api.catechism.text($('catSelect').value, $('catFrom').value, $('catTo').value, $('catRefs').checked);
+      insertIntoBody(text);
+      showCatNote();
+    } catch (e) {
+      msg.textContent = cleanError(e);
+    }
+  };
   fillSelect($('format'), state.catalog.formats);
   fillSelect($('color'), state.catalog.colors);
   fillSelect($('weight'), state.catalog.weights);

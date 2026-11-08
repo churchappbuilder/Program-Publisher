@@ -22,6 +22,7 @@ accounts, no fees.
 - [x] Flowing multi-page booklets (4, 8, 12 ... pages) with correct nested-sheet page order
 - [x] Rich body markup: section headings, hymn lines, Leader/People speaker labels, stand marks, instructions, notes lines, page breaks
 - [x] Text library: built-in public-domain texts (creeds, Lord's Prayer, Ten Commandments, benedictions, ...) plus a per-church library, loose inserts, and a "Next week" button
+- [x] Catechism picker (Westminster Shorter and Larger, Heidelberg, Baptist 1693) by question number or range
 - [ ] Weekly fill-in sheet (spreadsheet-style entry for hymns, readings, pieces and composers, with Excel/CSV paste)
 - [ ] Worship traditions: liturgical (Anglican/Episcopal, Presbyterian, Lutheran, Catholic, Methodist, Orthodox) and free-form styles, each with a matching order of service
 - [ ] Responsive readings (Leader / People), seasons of the church year, lectionary readings
@@ -37,6 +38,12 @@ Requires [Node.js](https://nodejs.org) (LTS).
 npm install
 npm start
 ```
+
+## Versions
+See [CHANGELOG.md](CHANGELOG.md). The current version is shown in the app under the title.
+
+## Credits
+Catechism texts come from [reformededucation.org](https://reformededucation.org/catechisms.html) (public domain); see `src/data/catechisms/README.md`.
 
 ## License
 GPL v3 or later. See `LICENSE`.

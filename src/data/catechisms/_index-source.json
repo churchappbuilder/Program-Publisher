@@ -1,0 +1,452 @@
+{
+  "_note": "Catechism metadata only. Each catechism's questions live in data/catechisms/<id>.json (loaded on demand). All are public domain; Scripture proofs and quotations use the King James Version where added.",
+  "entries": [
+    {
+      "id": "wsc",
+      "name": "Westminster Shorter Catechism",
+      "short": "WSC",
+      "group": "Presbyterian / Reformed",
+      "kind": "Catechism",
+      "placeholder": false,
+      "verification": "researched",
+      "status": "ready",
+      "description": "The Westminster Shorter Catechism: 107 questions and answers, with Scripture proofs from the King James Version.",
+      "tags": [],
+      "source": {
+        "title": "Westminster Shorter Catechism",
+        "copyright_status": "public-domain",
+        "copyright": "Public domain.",
+        "license": "Public domain",
+        "translation": "King James Version (Scripture proofs)",
+        "date": "First published 1648",
+        "notes": "The catechism text and its KJV Scripture proofs are in the public domain. Text supplied by reformededucation.org."
+      },
+      "count": 107,
+      "file": "catechisms/wsc.json",
+      "topic_ids": [
+        "theology/confessions-and-catechisms",
+        "christian-living/assurance-and-tender-consciences"
+      ]
+    },
+    {
+      "id": "wlc",
+      "name": "Westminster Larger Catechism",
+      "short": "WLC",
+      "group": "Presbyterian / Reformed",
+      "kind": "Catechism",
+      "verification": "researched",
+      "status": "ready",
+      "description": "The Westminster Larger Catechism: 196 questions and answers, with Scripture proofs from the King James Version.",
+      "tags": [],
+      "source": {
+        "title": "Westminster Larger Catechism",
+        "copyright_status": "public-domain",
+        "copyright": "Public domain.",
+        "license": "Public domain",
+        "translation": "King James Version (Scripture proofs)",
+        "notes": "Catechism text and KJV Scripture proofs are in the public domain. Text supplied by reformededucation.org."
+      },
+      "coverage_note": "This text was transcribed from supplied copies and has not yet been proofread against a standard edition. Questions 1–114 were also compared with a second, differently edited copy, and a few wording conflicts were settled in its favour. Questions 115–196 rest on one text.",
+      "placeholder": false,
+      "count": 196,
+      "file": "catechisms/wlc.json",
+      "topic_ids": [
+        "christian-living/assurance-and-tender-consciences",
+        "education/parents-and-the-home",
+        "education/public-school-and-the-christian-parent",
+        "theology/confessions-and-catechisms"
+      ]
+    },
+    {
+      "id": "fishers",
+      "name": "Fisher’s Catechism",
+      "short": "FC",
+      "group": "Presbyterian / Reformed",
+      "kind": "Explanation of the Shorter Catechism",
+      "placeholder": false,
+      "verification": "researched",
+      "status": "ready",
+      "file": "catechisms/fishers.json",
+      "count": 3827,
+      "description": "James Fisher and Ebenezer Erskine’s exposition of the Westminster Shorter Catechism: about 3,800 questions and answers, arranged under each Shorter Catechism question, with Scripture cited in the answers.",
+      "coverage_note": "This text was transcribed from a supplied digital edition and has not been proofread against a printed one. Numbering and page-layout irregularities in that edition may remain in places. James Fisher’s prefaces are included; the publisher’s introduction, editorial footnotes and index are not. Topics are the Shorter Catechism questions each item explains.",
+      "tags": [],
+      "source": {
+        "title": "The Westminster Assembly’s Shorter Catechism Explained, by Way of Question and Answer",
+        "author": "James Fisher and Ebenezer Erskine",
+        "date": "Part 1, 1753; Part 2, 1760",
+        "edition": "Digital text supplied by reformededucation.org",
+        "copyright_status": "public-domain",
+        "copyright": "Public domain.",
+        "license": "Public domain",
+        "notes": "The text is in the public domain. Text supplied by reformededucation.org. Scripture is quoted within the answers."
+      },
+      "has_front_matter": true,
+      "topic_ids": [
+        "theology/confessions-and-catechisms"
+      ]
+    },
+    {
+      "id": "wcf",
+      "name": "Westminster Confession of Faith",
+      "short": "WCF",
+      "group": "Presbyterian / Reformed",
+      "kind": "Confession",
+      "placeholder": false,
+      "verification": "researched",
+      "status": "ready",
+      "description": "The Westminster Confession of Faith: 33 chapters, 172 numbered sections, each with its Scripture proofs from the King James Version.",
+      "tags": [],
+      "source": {
+        "title": "The Westminster Confession of Faith",
+        "copyright_status": "public-domain",
+        "copyright": "Public domain.",
+        "license": "Public domain",
+        "translation": "Scripture proofs: King James Version",
+        "notes": "Public domain. Text transcribed from the unrevised (pre-1788) Westminster Confession as published by apuritansmind.com, which reformed.org's historic-documents index links to. Compared with the Orthodox Presbyterian Church's text (the American revision): the two agree except where the 1788 revision changed the chapters on the civil magistrate, marriage, church synods and the head of the church, and in scattered single-word variants (for example V.5, VII.3, XIII.2 and XVI.3). It has not yet been proofread against a standard printed edition. Scripture proof texts are the King James Version, from the public-domain Project Gutenberg edition, added with tools/add_kjv.py. A few references could not be matched to verses (whole-chapter references such as ‘Genesis 1 throughout’, and typing slips in the source) and are shown without text.",
+        "url": "https://www.apuritansmind.com/westminster-standards/",
+        "date": "First published 1646–1647"
+      },
+      "count": 33,
+      "research_sources": [
+        "https://reformed.org/historic-confessions/"
+      ],
+      "structure": "chapters",
+      "file": "catechisms/wcf.json",
+      "coverage_note": "Scripture proofs show the King James text. A few whole-chapter references are given without text.",
+      "topic_ids": [
+        "theology/confessions-and-catechisms",
+        "christian-living/assurance-and-tender-consciences"
+      ]
+    },
+    {
+      "id": "heidelberg",
+      "name": "Heidelberg Catechism",
+      "short": "HC",
+      "group": "Continental Reformed",
+      "kind": "Catechism",
+      "placeholder": false,
+      "verification": "researched",
+      "status": "ready",
+      "description": "The Heidelberg Catechism: 129 questions and answers with King James Version Scripture proofs, grouped into the introduction and its three parts (misery, deliverance, thankfulness).",
+      "tags": [],
+      "source": {
+        "title": "The Heidelberg Catechism",
+        "copyright_status": "public-domain",
+        "copyright": "Public domain.",
+        "license": "Public domain",
+        "translation": "English translation as published by apuritansmind.com; Scripture proofs: King James Version",
+        "notes": "Public domain. Text transcribed from apuritansmind.com, which reformed.org's historic-documents index links to. Compared automatically with the PDF at heidelberg-catechism.com, which is the same translation family: 217 of 258 questions and answers matched. Of the 41 that did not, I checked 18 by hand: Q12, Q18, Q27, Q56 and Q61 differ in wording, and the others were page-layout noise in the PDF; the remaining 23 were not checked by hand. Not yet proofread against a printed edition. Part divisions are the standard ones (Q1–2 introduction; Q3–11 misery; Q12–85 deliverance; Q86–129 thankfulness). The question 23 creed text had verse-number markers removed. Scripture proof texts are the King James Version, from the public-domain Project Gutenberg edition, added with tools/add_kjv.py. A few references could not be matched to verses (whole-chapter references such as ‘Genesis 1 throughout’, and typing slips in the source) and are shown without text.",
+        "url": "https://www.apuritansmind.com/creeds-and-confessions/the-heidelberg-catechism-by-zacharias-ursinus/",
+        "date": "First published 1563"
+      },
+      "count": 129,
+      "research_sources": [
+        "https://reformed.org/historic-confessions/",
+        "https://www.heidelberg-catechism.com/pdf/lords-days/Heidelberg-Catechism.pdf"
+      ],
+      "file": "catechisms/heidelberg.json",
+      "coverage_note": "Scripture proofs show the King James text. A few whole-chapter references are given without text.",
+      "topic_ids": [
+        "theology/confessions-and-catechisms",
+        "christian-living/assurance-and-tender-consciences"
+      ]
+    },
+    {
+      "id": "belgic",
+      "name": "Belgic Confession",
+      "short": "BC",
+      "group": "Continental Reformed",
+      "kind": "Confession",
+      "placeholder": false,
+      "verification": "researched",
+      "status": "ready",
+      "description": "The Belgic Confession (Guido de Brès, 1561, revised at the Synod of Dort, 1618–1619): 37 articles.",
+      "tags": [],
+      "source": {
+        "title": "The Belgic Confession",
+        "copyright_status": "public-domain",
+        "copyright": "Public domain.",
+        "license": "Public domain",
+        "translation": "English translation printed in the Constitution of the Reformed Dutch Church in North America (1793)",
+        "notes": "Public domain: published before 1931. Text taken from the proofread Wikisource transcription of that printing. Compared with a second English text on apuritansmind.com (a lightly modernized version of the same lineage): the two agree in substance and differ in wording, for example 'saith' against 'says'. Not yet proofread against a printed edition.",
+        "url": "https://en.wikisource.org/wiki/Belgic_Confession",
+        "date": "1561; revised 1618–1619"
+      },
+      "count": 37,
+      "research_sources": [
+        "https://reformed.org/historic-confessions/",
+        "https://www.apuritansmind.com/creeds-and-confessions/the-belgic-confession-circa-1561-a-d/"
+      ],
+      "structure": "chapters",
+      "unit": "article",
+      "file": "catechisms/belgic.json",
+      "coverage_note": "This is the older English translation from the 1793 Constitution of the Reformed Dutch Church in North America. Later translations (for example the Christian Reformed Church's 1985 version) are in modern English and are copyrighted, so they are not used here. Scripture references appear in the text as the translation gives them.",
+      "topic_ids": [
+        "theology/confessions-and-catechisms"
+      ]
+    },
+    {
+      "id": "dort",
+      "name": "Canons of Dort",
+      "short": "CD",
+      "group": "Continental Reformed",
+      "kind": "Confession",
+      "placeholder": false,
+      "verification": "researched",
+      "status": "ready",
+      "description": "The Canons of Dort (Synod of Dordrecht, 1618–1619): the four heads of doctrine, 59 articles, with the conclusion.",
+      "tags": [],
+      "source": {
+        "title": "The Canons of the Synod of Dordrecht",
+        "copyright_status": "public-domain",
+        "copyright": "Public domain.",
+        "license": "Public domain",
+        "translation": "English translation printed in the Constitution of the Reformed Dutch Church of North America (1840)",
+        "notes": "Public domain: published before 1931. Text taken from the Wikisource transcription of that printing; head and article counts (18, 9, 17 and 15) match the standard canons. Not yet compared with a second copy of the same translation or proofread against a printed edition.",
+        "url": "https://en.wikisource.org/wiki/The_Constitution_of_the_Reformed_Dutch_Church_of_North_America/Canons_of_the_Synod_of_Dordrecht",
+        "date": "1618–1619"
+      },
+      "count": 5,
+      "research_sources": [
+        "https://reformed.org/historic-confessions/",
+        "https://en.wikisource.org/wiki/The_Constitution_of_the_Reformed_Dutch_Church_of_North_America"
+      ],
+      "structure": "chapters",
+      "unit": "head",
+      "file": "catechisms/dort.json",
+      "coverage_note": "This is the 1840 English printing in the Reformed Dutch Church's constitution. It gives the articles and the conclusion; the ‘Rejection of Errors’ sections found in some translations are not in this printing. The signatories’ list is left out. Modern translations, such as the Christian Reformed Church’s 2011 version, are copyrighted and are not used.",
+      "topic_ids": [
+        "theology/confessions-and-catechisms"
+      ]
+    },
+    {
+      "id": "helvetic2",
+      "name": "Second Helvetic Confession",
+      "short": "2HC",
+      "group": "Continental Reformed",
+      "kind": "Confession",
+      "placeholder": false,
+      "verification": "researched",
+      "status": "ready",
+      "description": "The Second Helvetic Confession (Heinrich Bullinger, 1566): 30 chapters and the conclusion.",
+      "tags": [],
+      "source": {
+        "title": "The Second Helvetic Confession",
+        "copyright_status": "public-domain",
+        "copyright": "Public domain.",
+        "license": "Public domain",
+        "translation": "English version in Philip Schaff, The Creeds of Christendom, vol. 3 (third edition, 1885); several chapters adapted from the 1586 Harmony of Reformed Confessions",
+        "notes": "Public domain: published before 1931. Text taken from the Wikisource transcription. Compared with a second transcription on reformeddogmatika.com: 89% of the 8-word segments checked matched exactly, and the ones I looked at that differed were Scripture citations set in a different style. The rest of the differences were not checked. Not yet proofread against a printed edition.",
+        "url": "https://en.wikisource.org/wiki/The_Creeds_of_Christendom:_with_a_History_and_Critical_Notes/Volume_III/Appendix:_The_Second_Helvetic_Confession",
+        "date": "1566"
+      },
+      "count": 31,
+      "research_sources": [
+        "https://reformed.org/historic-confessions/the-second-helvetic-confession/",
+        "https://reformeddogmatika.com/second-helvetic-confession/"
+      ],
+      "structure": "chapters",
+      "unit": "chapter",
+      "file": "catechisms/helvetic2.json",
+      "coverage_note": "This is Philip Schaff’s English version. Paragraphs are shown as the translation gives them; they are not numbered in the original, and Scripture references appear inside the text.",
+      "topic_ids": [
+        "theology/confessions-and-catechisms"
+      ]
+    },
+    {
+      "id": "lbcf1689",
+      "name": "Second London Baptist Confession of Faith",
+      "short": "2LBCF",
+      "group": "Reformed Baptist",
+      "kind": "Confession",
+      "placeholder": false,
+      "verification": "researched",
+      "status": "ready",
+      "description": "The Second London Baptist Confession of Faith (1677, adopted 1689): 32 chapters, with King James Version Scripture proofs for each section.",
+      "tags": [],
+      "source": {
+        "title": "The Second London Baptist Confession of Faith",
+        "copyright_status": "public-domain",
+        "copyright": "Public domain.",
+        "license": "Public domain",
+        "translation": "English text, spelling modernized; Scripture proofs: King James Version",
+        "notes": "Public domain: published before 1931. Text taken from Wikisource, which marks it as a text without a scanned source, and compared with a second transcription on reformedreader.org: the two agree apart from that site's footnote numbers, and both give the same section counts. Not yet proofread against a scanned original. Scripture proof texts are the King James Version, from the public-domain Project Gutenberg edition, added with tools/add_kjv.py. A few references could not be matched to verses (whole-chapter references such as ‘Genesis 1 throughout’, and typing slips in the source) and are shown without text.",
+        "url": "https://en.wikisource.org/wiki/1689_Baptist_Confession_of_Faith",
+        "date": "1677; adopted 1689"
+      },
+      "count": 32,
+      "research_sources": [
+        "https://reformed.org/historic-confessions/",
+        "https://www.reformedreader.org/ccc/1689lbc/english/1689econtents.htm"
+      ],
+      "structure": "chapters",
+      "unit": "chapter",
+      "file": "catechisms/lbcf1689.json",
+      "coverage_note": "Spelling is modernized in the text used here. The 1677 preface, the closing statement and the list of signatories are not included. Scripture proofs show the King James text and follow each section as the source groups them; a few references are given without text.",
+      "topic_ids": [
+        "theology/confessions-and-catechisms"
+      ]
+    },
+    {
+      "id": "baptist-catechism",
+      "name": "Baptist Catechism of 1693",
+      "short": "BC1693",
+      "group": "Reformed Baptist",
+      "kind": "Catechism",
+      "placeholder": false,
+      "verification": "researched",
+      "status": "ready",
+      "description": "The Baptist Catechism (commonly called Keach’s Catechism), in the text of the 1695 fifth edition: 114 questions and answers with King James Version Scripture proofs.",
+      "tags": [],
+      "source": {
+        "title": "The Baptist Catechism (Keach’s Catechism)",
+        "copyright_status": "public-domain",
+        "copyright": "Public domain.",
+        "license": "Public domain",
+        "translation": "Original English, spelling lightly modernized; Scripture proofs: King James Version",
+        "notes": "Public domain: published before 1931. Text taken from baptistcatechism.org, which uses the oldest known copy (the 1695 fifth edition). The other online text I found (reformedreader.org) is the Spurgeon-era version, a different wording, so it could not be used to check this one. Not yet proofread against a scanned original. Scripture proof texts are the King James Version, from the public-domain Project Gutenberg edition, added with tools/add_kjv.py. A few references could not be matched to verses (whole-chapter references such as ‘Genesis 1 throughout’, and typing slips in the source) and are shown without text.",
+        "date": "1693; text of the 1695 fifth edition",
+        "url": "https://baptistcatechism.org/"
+      },
+      "count": 114,
+      "file": "catechisms/baptist-catechism.json",
+      "coverage_note": "Scripture proofs show the King James text; a few whole-chapter references are given without text. This is the original 1693–1695 catechism. Charles Spurgeon’s later edition, which follows the Westminster Shorter Catechism more closely, is a different text.",
+      "research_sources": [
+        "https://baptistcatechism.org/",
+        "https://www.reformedreader.org/ccc/keachcat.htm"
+      ],
+      "topic_ids": [
+        "theology/confessions-and-catechisms"
+      ]
+    },
+    {
+      "id": "apostles",
+      "name": "Apostles' Creed",
+      "short": "AC",
+      "group": "Ecumenical",
+      "kind": "Creed",
+      "placeholder": false,
+      "verification": "researched",
+      "status": "ready",
+      "description": "The Apostles' Creed in its received form.",
+      "tags": [],
+      "source": {
+        "title": "The Apostles' Creed (received form)",
+        "copyright_status": "public-domain",
+        "copyright": "Public domain.",
+        "license": "Public domain",
+        "translation": "English, from Philip Schaff, The Creeds of Christendom, vol. 2 (1877; later editions)",
+        "notes": "Public domain. English of the received form of the Apostles' Creed as given in Philip Schaff, The Creeds of Christendom, vol. 2. Schaff's bracketed alternative readings and footnote numbers are removed. Not yet compared with a second edition.",
+        "url": "https://ccel.org/ccel/schaff/creeds2/creeds2.i.html"
+      },
+      "count": 1,
+      "research_sources": [
+        "https://reformed.org/historic-confessions/"
+      ],
+      "structure": "chapters",
+      "unit": "creed",
+      "file": "catechisms/apostles.json",
+      "coverage_note": "Read online. The creeds are given in English only.",
+      "topic_ids": [
+        "theology/confessions-and-catechisms"
+      ]
+    },
+    {
+      "id": "nicene",
+      "name": "Nicene Creed",
+      "short": "NC",
+      "group": "Ecumenical",
+      "kind": "Creed",
+      "placeholder": false,
+      "verification": "researched",
+      "status": "ready",
+      "description": "The Nicene Creed in the form used by Western and Reformed churches (the Niceno-Constantinopolitan Creed).",
+      "tags": [],
+      "source": {
+        "title": "The Nicene Creed (received Western text as printed by Schaff)",
+        "copyright_status": "public-domain",
+        "copyright": "Public domain.",
+        "license": "Public domain",
+        "translation": "English, from Philip Schaff, The Creeds of Christendom, vol. 2 (1877; later editions)",
+        "notes": "Public domain. English of the received Western text, in Philip Schaff, The Creeds of Christendom, vol. 2. It includes 'God of God' and the Filioque ('and the Son'), as Reformed churches have used it; Eastern churches omit the Filioque. Schaff's bracketed alternatives are removed. Not yet compared with a second edition.",
+        "url": "https://ccel.org/ccel/schaff/creeds2/creeds2.i.html"
+      },
+      "count": 1,
+      "research_sources": [
+        "https://reformed.org/historic-confessions/"
+      ],
+      "structure": "chapters",
+      "unit": "creed",
+      "file": "catechisms/nicene.json",
+      "coverage_note": "Read online. The creeds are given in English only.",
+      "topic_ids": [
+        "theology/confessions-and-catechisms"
+      ]
+    },
+    {
+      "id": "athanasian",
+      "name": "Athanasian Creed",
+      "short": "ATH",
+      "group": "Ecumenical",
+      "kind": "Creed",
+      "placeholder": false,
+      "verification": "researched",
+      "status": "ready",
+      "description": "The Athanasian Creed (Quicunque vult), in the 1548 English version.",
+      "tags": [],
+      "source": {
+        "title": "The Athanasian Creed",
+        "copyright_status": "public-domain",
+        "copyright": "Public domain.",
+        "license": "Public domain",
+        "translation": "English, from Philip Schaff, The Creeds of Christendom, vol. 2 (1877; later editions)",
+        "notes": "Public domain. English of the sixteenth-century (1548) Book of Common Prayer version, as given in Schaff, The Creeds of Christendom, vol. 2, in 44 numbered verses. Schaff's bracketed emendations are removed. The BCP numbers 40 verses; Schaff's 44 are used. Not yet compared with a second edition.",
+        "url": "https://ccel.org/ccel/schaff/creeds2/creeds2.i.html"
+      },
+      "count": 1,
+      "research_sources": [
+        "https://reformed.org/historic-confessions/"
+      ],
+      "structure": "chapters",
+      "unit": "creed",
+      "file": "catechisms/athanasian.json",
+      "coverage_note": "Read online. The creeds are given in English only.",
+      "topic_ids": [
+        "theology/confessions-and-catechisms"
+      ]
+    },
+    {
+      "id": "chalcedon",
+      "name": "Definition of Chalcedon",
+      "short": "DC",
+      "group": "Ecumenical",
+      "kind": "Creed",
+      "placeholder": false,
+      "verification": "researched",
+      "status": "ready",
+      "description": "The Chalcedonian definition of the two natures of Christ, from the Council of Chalcedon in 451.",
+      "tags": [],
+      "source": {
+        "title": "The Definition of Chalcedon (451)",
+        "copyright_status": "public-domain",
+        "copyright": "Public domain.",
+        "license": "Public domain",
+        "translation": "English, from Philip Schaff, The Creeds of Christendom, vol. 2 (1877; later editions)",
+        "notes": "Public domain. English translation in Schaff, The Creeds of Christendom, vol. 2. The Greek words Schaff inserts in the middle of the sentence are removed and his bracketed alternatives left out, except for the words 'have declared'. Not yet compared with a second edition.",
+        "url": "https://ccel.org/ccel/schaff/creeds2/creeds2.i.html"
+      },
+      "count": 1,
+      "research_sources": [
+        "https://reformed.org/historic-confessions/"
+      ],
+      "structure": "chapters",
+      "unit": "creed",
+      "file": "catechisms/chalcedon.json",
+      "coverage_note": "Read online. The creeds are given in English only.",
+      "topic_ids": [
+        "theology/confessions-and-catechisms"
+      ]
+    }
+  ]
+}

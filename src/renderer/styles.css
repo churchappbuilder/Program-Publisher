@@ -91,3 +91,9 @@ details.help pre { margin: 6px 0 0; padding: 8px; background: #eceef2; border-ra
 .isInsert .coverField { display: none; }
 #textDialog { width: 820px; }
 #textDialog textarea { margin-top: 4px; }
+
+/* ----- catechism picker, version ----- */
+input.num { width: 64px; flex: none; margin-top: 0; }
+#catNote { margin: 0 0 10px; }
+.sidebar h1 { margin-bottom: 2px; }
+p.ver { margin: 0 0 14px; }

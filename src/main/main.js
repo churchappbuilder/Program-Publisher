@@ -6,6 +6,7 @@ const fs = require('fs');
 const { FORMATS, WEIGHTS, COLORS } = require('../shared/paper');
 const { SERVICE_TYPES } = require('../shared/presets');
 const { BUILTIN_TEXTS } = require('../shared/texts');
+const { CATECHISMS, formatQA } = require('../shared/catechism');
 const { open } = require('./db');
 
 let db;
@@ -172,6 +173,15 @@ function registerIpc() {
   ipcMain.handle('templates:duplicate', (_e, id) => db.duplicateTemplate(id));
   ipcMain.handle('templates:delete', (_e, id) => db.deleteTemplate(id));
 
+  ipcMain.handle('app:version', () => require('../../package.json').version);
+  ipcMain.handle('catechism:list', () => CATECHISMS);
+  ipcMain.handle('catechism:text', (_e, id, from, to, refs) => {
+    const meta = CATECHISMS.find((c) => c.id === id);
+    if (!meta) throw new Error('Unknown catechism.');
+    const file = path.join(__dirname, '..', 'data', 'catechisms', meta.file + '.json');
+    const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return formatQA(doc, from, to, { refs: !!refs });
+  });
   ipcMain.handle('texts:builtin', () => BUILTIN_TEXTS);
   ipcMain.handle('texts:list', (_e, orgId) => db.listTexts(orgId));
   ipcMain.handle('texts:create', (_e, orgId, data) => db.createText(orgId, data));

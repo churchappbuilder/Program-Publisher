@@ -26,6 +26,11 @@ contextBridge.exposeInMainWorld('api', {
     duplicate: call('templates:duplicate'),
     delete: call('templates:delete')
   },
+  version: call('app:version'),
+  catechism: {
+    list: call('catechism:list'),
+    text: call('catechism:text')
+  },
   texts: {
     builtin: call('texts:builtin'),
     list: call('texts:list'),

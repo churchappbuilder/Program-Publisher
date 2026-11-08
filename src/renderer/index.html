@@ -11,6 +11,7 @@
 <body>
   <aside class="sidebar">
     <h1>Program Publisher</h1>
+    <p id="version" class="hint ver"></p>
 
     <div class="row">
       <label class="grow">Organization
@@ -47,6 +48,14 @@
         <button type="button" id="textInsert" class="btn">Insert</button>
         <button type="button" id="textManage" class="btn" title="Your church's text library">Library…</button>
       </div>
+      <div class="row textRow">
+        <select id="catSelect" class="grow" title="Catechism"></select>
+        <input id="catFrom" type="number" min="1" placeholder="Q" class="num" title="First question">
+        <input id="catTo" type="number" min="1" placeholder="to" class="num" title="Last question (optional)">
+        <button type="button" id="catInsert" class="btn">Insert Q&amp;A</button>
+      </div>
+      <label class="check"><input id="catRefs" type="checkbox"> Include Scripture references</label>
+      <p id="catNote" class="hint"></p>
       <div class="snips" id="snips">
         <button type="button" class="btn small" data-snip="# Section heading">Section</button>
         <button type="button" class="btn small" data-snip="Hymn | Title | Number">Hymn</button>
