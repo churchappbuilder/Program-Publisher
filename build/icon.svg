@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2d5589"/>
+      <stop offset="1" stop-color="#16284a"/>
+    </linearGradient>
+    <linearGradient id="pl" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#e3e9f2"/>
+      <stop offset="1" stop-color="#f7f9fc"/>
+    </linearGradient>
+    <linearGradient id="pr" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#eef2f8"/>
+      <stop offset="1" stop-color="#ffffff"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+
+  <!-- soft shadow under the open program -->
+  <ellipse cx="128" cy="214" rx="96" ry="9" fill="#000" opacity=".22"/>
+
+  <!-- left page (cover side) -->
+  <g transform="translate(36 62) skewY(7.4)">
+    <rect width="92" height="132" fill="url(#pl)"/>
+    <rect x="26" y="30" width="40" height="3" fill="#c9a24a"/>
+    <rect x="14" y="44" width="64" height="10" rx="2" fill="#1f3a5f"/>
+    <rect x="22" y="60" width="48" height="5" rx="2" fill="#7d8aa3"/>
+    <rect x="30" y="72" width="32" height="4" rx="2" fill="#b9c3d4"/>
+  </g>
+
+  <!-- right page (order-of-service side) -->
+  <g transform="translate(128 74) skewY(-7.4)">
+    <rect width="92" height="132" fill="url(#pr)"/>
+    <rect x="14" y="16" width="44" height="7" rx="2" fill="#1f3a5f"/>
+    <rect x="14" y="26" width="64" height="2.5" fill="#c9a24a"/>
+    <rect x="14" y="40" width="64" height="4" rx="2" fill="#b9c3d4"/>
+    <rect x="14" y="54" width="56" height="4" rx="2" fill="#b9c3d4"/>
+    <rect x="14" y="68" width="64" height="4" rx="2" fill="#b9c3d4"/>
+    <rect x="14" y="82" width="48" height="4" rx="2" fill="#b9c3d4"/>
+    <rect x="14" y="96" width="60" height="4" rx="2" fill="#b9c3d4"/>
+  </g>
+
+  <!-- fold crease -->
+  <rect x="126" y="74" width="4" height="132" fill="#000" opacity=".14"/>
+</svg>
