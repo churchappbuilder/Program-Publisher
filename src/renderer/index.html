@@ -88,10 +88,15 @@
       <label class="coverField">Subtitle <input id="subtitle" type="text"></label>
       <label class="coverField">Date <input id="date" type="text" placeholder="Sunday, January 4, 2026"></label>
 
+      <button type="button" id="coverOpen" class="btn wide coverField" title="Choose the layout, picture and details for the front cover">Design the cover…</button>
+
       <h3>2. This week's service</h3>
       <button type="button" id="sheetOpen" class="btn primary wide" title="Type each week's hymn numbers, readings and names, or paste them from Excel">Fill in the order of service…</button>
       <p class="hint">Type the hymn numbers, readings and names. You can also paste them from Excel.</p>
 
+      <div id="churchSlot">
+      <div id="churchTools">
+      <p class="miniLabel advOnly">Church texts: creeds, prayers and catechisms</p>
       <p class="miniLabel">Add a creed or prayer</p>
       <div class="row textRow">
         <select id="textSelect" class="grow" title="Choose a creed, prayer or benediction"></select>
@@ -107,9 +112,12 @@
       </div>
       <label class="check"><input id="catRefs" type="checkbox"> Include Scripture references</label>
       <p id="catNote" class="hint"></p>
+      </div>
+      </div>
 
       <details class="adv">
         <summary>Advanced: edit all the text directly</summary>
+        <div id="advSlot"></div>
         <div class="snips" id="snips">
           <button type="button" class="btn small" data-snip="# Section heading">Section</button>
           <button type="button" class="btn small" data-snip="Hymn | Title | Number">Hymn</button>
@@ -179,6 +187,49 @@ Plain lines make a paragraph; line breaks are kept.</pre>
   </div>
   </div>
 
+  <dialog id="coverDialog">
+    <div class="coverBox">
+      <h2>Design the cover</h2>
+      <p class="hint">Pick a layout, add a picture if you like, and choose what shows. The preview updates as you go.</p>
+      <div class="coverCols">
+        <div class="coverOpts">
+          <h3>Layout</h3>
+          <div id="cv_styles" class="cvStyles"></div>
+          <h3>What stands out most</h3>
+          <div class="seg" id="cv_emph">
+            <button type="button" data-e="name">The name</button>
+            <button type="button" data-e="title">The title</button>
+          </div>
+          <h3>Picture</h3>
+          <div class="seg" id="cv_picKind">
+            <button type="button" data-k="none">None</button>
+            <button type="button" data-k="builtin">Seasonal art</button>
+            <button type="button" data-k="asset">My picture</button>
+          </div>
+          <div id="cv_builtin" class="artGrid"></div>
+          <div id="cv_asset">
+            <div class="row"><select id="cv_assetSel" class="grow"></select><button type="button" id="cv_addPic" class="btn">Add a picture…</button></div>
+            <p class="hint">Pictures you add are saved for this church or school, so you can use them again.</p>
+          </div>
+          <h3>Show on the cover</h3>
+          <div class="checks">
+            <label class="check"><input id="cv_logo" type="checkbox"> Logo</label>
+            <label class="check"><input id="cv_name" type="checkbox"> Name</label>
+            <label class="check"><input id="cv_tagline" type="checkbox"> Tagline</label>
+            <label class="check"><input id="cv_date" type="checkbox"> Date</label>
+            <label class="check"><input id="cv_address" type="checkbox"> Address and contact</label>
+          </div>
+          <label>Verse or quote (optional)<textarea id="cv_quote" rows="2" placeholder="Oh come, let us worship and bow down. Psalm 95:6"></textarea></label>
+          <label>Extra text at the bottom (optional)<textarea id="cv_footer" rows="2" placeholder="Worship at 8:30 and 11:00 am"></textarea></label>
+        </div>
+        <div class="coverPrev">
+          <div id="cv_preview"></div>
+          <p id="cv_note" class="hint"></p>
+        </div>
+      </div>
+      <div class="row end"><span class="grow"></span><button type="button" id="cv_done" class="btn primary">Done</button></div>
+    </div>
+  </dialog>
   <dialog id="sheetDialog">
     <div class="sheetBox">
       <h2>Weekly fill-in sheet</h2>
@@ -233,6 +284,13 @@ Plain lines make a paragraph; line breaks are kept.</pre>
     <form method="dialog" id="orgForm">
       <h2 id="orgDialogTitle">Organization</h2>
       <div class="grid2">
+        <label>This is a
+          <select id="o_kind">
+            <option value="church">Church</option>
+            <option value="school">School</option>
+            <option value="other">Something else</option>
+          </select>
+        </label>
         <label>Name <input id="o_name" type="text" required></label>
         <label>Tagline <input id="o_tagline" type="text"></label>
         <label>Address <input id="o_address" type="text"></label>
@@ -271,6 +329,7 @@ Plain lines make a paragraph; line breaks are kept.</pre>
     </form>
   </dialog>
 
+  <script src="../shared/artwork.js"></script>
   <script src="../shared/layout.js"></script>
   <script src="../shared/sheet.js"></script>
   <script src="../shared/wizard.js"></script>

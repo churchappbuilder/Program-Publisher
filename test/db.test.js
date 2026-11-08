@@ -102,3 +102,14 @@ test('text library: per-organization texts, update, delete, cascade', () => {
   db.close();
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test('organization kind: defaults to church, can be school, survives update', () => {
+  const { db, dir } = tempDb();
+  const a = db.createOrg({ name: 'A church' });
+  const s = db.createOrg({ name: 'A school', kind: 'school' });
+  assert.strictEqual(a.kind, 'church');
+  assert.strictEqual(s.kind, 'school');
+  assert.strictEqual(db.updateOrg(a.id, { kind: 'other' }).kind, 'other');
+  db.close();
+  fs.rmSync(dir, { recursive: true, force: true });
+});

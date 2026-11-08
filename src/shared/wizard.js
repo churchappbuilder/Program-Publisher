@@ -352,6 +352,20 @@
     return { name, title, subtitle, body: r.body, sheetMode, outline: r.outline };
   }
 
+  // A sensible starting cover for each kind of program (the person can change it).
+  function coverFor(type, a) {
+    const art = (id) => ({ kind: 'builtin', id });
+    const none = { kind: 'none', id: '' };
+    if (type === 'funeral') return { style: 'framed', art: art('cross') };
+    if (type === 'wedding') return { style: 'framed', art: art('flower') };
+    if (type === 'school') {
+      if (a.kind === 'graduation') return { style: 'banner', art: art('cap') };
+      if (a.kind === 'concert' || a.kind === 'recital') return { style: 'picture', art: art('notes') };
+      return { style: 'picture', art: art('star') };
+    }
+    return { style: 'classic', art: none };
+  }
+
   function buildOther() {
     return { name: 'New Program', title: 'Program Title', subtitle: '', sheetMode: 'service', outline: ['Order of Program'],
       body: '# Order of Program\nItem one |\nItem two |\nItem three |' };
@@ -369,7 +383,7 @@
     else if (type === 'wedding') out = buildWedding(a, texts);
     else if (type === 'school') out = buildSchool(a);
     else out = buildOther();
-    return { formatId: 'letter-bifold', ...out };
+    return { formatId: 'letter-bifold', cover: coverFor(type, a), ...out };
   }
 
   return { TYPES, TRADITIONS, QUESTIONS, defaults, build };

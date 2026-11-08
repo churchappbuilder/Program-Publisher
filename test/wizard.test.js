@@ -163,3 +163,14 @@ test('Lutheran and Methodist orders match the examples', () => {
   const meth = Wizard.build('church', { ...all, tradition: 'methodist' }, texts).body;
   assert.ok(meth.includes('Hymn of Preparation') && meth.includes('Prayer of Dedication') && meth.includes('Passing of the Peace'));
 });
+test('every program type suggests a cover that uses real artwork and layouts', () => {
+  const Artwork = require('../src/shared/artwork');
+  for (const t of Wizard.TYPES) {
+    const r = Wizard.build(t.id, {}, texts);
+    assert.ok(Layout.COVER_STYLES.some((s) => s.id === r.cover.style), t.id);
+    if (r.cover.art.kind === 'builtin') assert.ok(Artwork.svg(r.cover.art.id), t.id + ' art exists');
+  }
+  assert.strictEqual(Wizard.build('school', { kind: 'graduation' }).cover.style, 'banner');
+  assert.strictEqual(Wizard.build('school', { kind: 'concert' }).cover.art.id, 'notes');
+  assert.strictEqual(Wizard.build('church', {}, texts).cover.style, 'classic');
+});

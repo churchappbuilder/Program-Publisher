@@ -4,6 +4,19 @@ All notable changes to Program Publisher. Versions follow [Semantic Versioning](
 while the app is below 1.0, new features bump the middle number (0.2.0 → 0.3.0) and fixes bump the last (0.2.0 → 0.2.1).
 The version shows in the app under the title and in the installer file name.
 
+## 0.5.0 — 2026-11-08
+### Added
+- **Cover designer** ("Design the cover…"): six layouts drawn from real church and school covers (Classic; Name on top, details below; Picture feature; Full-page picture; Color banner; Framed), with a live preview and a choice of what stands out most, the name or the title.
+- **Pictures for covers:** your own pictures (saved for each church or school so you can reuse them), or 12 built-in drawings that take your accent color: cross, communion cup, flame, star, Advent wreath, spring flower, autumn leaves, wheat, open Bible, fish, music notes and graduation cap.
+- Choose what shows on the cover (logo, name, tagline, date, address and contact), plus an optional verse and extra text at the bottom (such as service times).
+- The New program wizard suggests a cover that suits the program, and the start screen's pictures now show real covers.
+
+### Changed
+- The name of the church or school is now the largest line on the cover, and the program title is the smaller line.
+- For schools, the creed, prayer and catechism tools moved under "Advanced". The setup screen asks whether this is a church, a school or something else, and schools see the School templates first.
+
+### Fixed
+- A save in progress could overwrite an edit made a split second earlier.
 ## 0.4.0 — 2026-11-08
 ### Added
 - Start screen, like Word's: a **New program** tile, your **recent** programs beside it, and a gallery of starter templates split into **Church** and **School**. Every picture uses your own logo, colors and fonts.

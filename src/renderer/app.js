@@ -18,6 +18,7 @@ const state = {
   side: 0,            // which side of the sheet the preview shows (0 outside, 1 inside)
   view: 'home',       // which screen is showing: home | wizard | editor
   caret: null,        // last cursor position in the body text box (null = add things at the end)
+  coverUrl: null,     // the picture chosen for the current cover (data URL), if any
   dialogOrgId: null   // org being edited in the dialog (null = new)
 };
 
@@ -94,6 +95,7 @@ function currentContent() {
     subtitle: $('subtitle').value,
     date: $('date').value,
     body: $('body').value,
+    cover: state.tpl && state.tpl.content ? state.tpl.content.cover : undefined,
     plain: !!(state.tpl && state.tpl.content && state.tpl.content.plain), // inserts have no cover header
     sheetMode: (state.tpl && state.tpl.content && state.tpl.content.sheetMode) || 'service'
   };
@@ -116,7 +118,7 @@ function render() {
   $('formatNote').textContent = f.note;
 
   // Flow the text across pages and work out the printed sheets.
-  const layout = Layout.paginate(document, geo, { org, content: currentContent(), logoUrl: state.logoUrl });
+  const layout = Layout.paginate(document, geo, { org, content: currentContent(), logoUrl: state.logoUrl, coverUrl: state.coverUrl });
   const nSides = layout.sides.length;
   if (state.side >= nSides) state.side = nSides - 1;
   if (state.side < 0) state.side = 0;
@@ -156,8 +158,20 @@ function render() {
 
 // ---------- templates ----------
 
+// Creeds, prayers and catechisms are church tools. Schools rarely use them, so for a school
+// they live under "Advanced" instead of in the main steps.
+const SCHOOL_TEMPLATES = new Set(['school', 'recital', 'graduation', 'play', 'awards']);
+
+function placeChurchTools() {
+  const school = (state.org && state.org.kind === 'school') || (state.tpl && SCHOOL_TEMPLATES.has(state.tpl.service_type));
+  const target = school ? $('advSlot') : $('churchSlot');
+  const tools = $('churchTools');
+  if (tools.parentElement !== target) target.appendChild(tools);
+}
+
 function fillEditor(tpl) {
   state.tpl = tpl;
+  placeChurchTools();
   if (!tpl) { render(); return; }
   $('tplName').value = tpl.name;
   $('title').value = tpl.content.title || '';
@@ -166,6 +180,8 @@ function fillEditor(tpl) {
   $('body').value = Layout.normContent(tpl.content).body; // older templates are converted on the fly
   state.side = 0;
   state.caret = null;
+  state.coverUrl = null;
+  refreshCoverUrl().then(() => { if (state.view === 'editor' && state.tpl === tpl) render(); });
   $('stageMsg').textContent = '';
   $('editor').classList.toggle('isInsert', !!tpl.content.plain);
   $('format').value = tpl.format_id;
@@ -191,14 +207,20 @@ async function refreshTemplates(selectId) {
 
 const saveTemplate = debounce(async () => {
   if (!state.tpl) return;
-  const updated = await window.api.templates.update(state.tpl.id, {
-    name: $('tplName').value.trim() || state.tpl.name,
+  const tpl = state.tpl;
+  const updated = await window.api.templates.update(tpl.id, {
+    name: $('tplName').value.trim() || tpl.name,
     format_id: $('format').value,
     color_id: $('color').value,
     weight_id: $('weight').value,
     content: currentContent()
   });
-  state.tpl = updated;
+  // The screen is the source of truth while you are editing. Do NOT swap in the saved copy,
+  // or an edit made while the save was in flight would be overwritten. Only note what the save changed.
+  Object.assign(tpl, { name: updated.name, format_id: updated.format_id, color_id: updated.color_id, weight_id: updated.weight_id, updated_at: updated.updated_at });
+  // Keep the list (used by the start screen's Recent) up to date with what was just saved.
+  const at = state.templates.findIndex((t) => t.id === updated.id);
+  if (at >= 0) state.templates[at] = { ...updated, content: { ...tpl.content } };
   const opt = $('tplSelect').querySelector(`option[value="${updated.id}"]`);
   if (opt) opt.textContent = updated.name;
 }, 400);
@@ -454,11 +476,11 @@ function openTemplate(id) {
 
 // A small picture of a template, using the organization's own logo, colors and fonts.
 // It is laid out at true size and shrunk, so it matches what will print.
-function makeThumb(format, colorId, content) {
+function makeThumb(format, colorId, content, coverUrl) {
   const org = state.org;
   const geo = Layout.geometry(format);
-  const layout = Layout.paginate(document, geo, { org, content, logoUrl: state.logoUrl });
-  const side = geo.kind !== 'flat' && layout.sides.length > 1 ? 1 : 0; // show the inside of folded pieces
+  const layout = Layout.paginate(document, geo, { org, content, logoUrl: state.logoUrl, coverUrl });
+  const side = 0; // the outside, so the cover shows
   const W = format.width * Layout.PX_PER_IN, H = format.height * Layout.PX_PER_IN;
   const k = Math.min(176 / W, 132 / H);
   const color = state.catalog.colors.find((c) => c.id === colorId) || state.catalog.colors[0];
@@ -517,12 +539,22 @@ function renderHome() {
   const rec = [...state.templates].sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at))).slice(0, 5);
   if (!rec.length) recent.innerHTML = '<p class="emptyNote">Nothing here yet. Start a new program, or pick a template below.</p>';
   const thumbs = [];
+  // Covers that use one of the church's own pictures need that picture loaded first.
+  const missing = [...new Set(rec.map((t) => coverAssetId(t.content)).filter((id) => id && !assetUrlCache.has(id)))];
+  if (missing.length) Promise.all(missing.map(assetUrl)).then(() => { if (state.view === 'home') renderHome(); });
   for (const t of rec) {
-    const th = makeThumb(formatById(t.format_id), t.color_id, t.content);
+    const th = makeThumb(formatById(t.format_id), t.color_id, t.content, coverUrlSync(t.content));
     const when = new Date(String(t.updated_at).replace(' ', 'T') + 'Z');
     const card = makeCard(t.name, 'Edited ' + (isNaN(when) ? '' : when.toLocaleDateString()), th, () => openTemplate(t.id));
     recent.appendChild(card);
     thumbs.push(th);
+  }
+
+  // A school sees the School templates first, a church sees the Church ones.
+  if (state.galleryFor !== org.id) {
+    state.galleryFor = org.id;
+    const want = org.kind === 'school' ? 'school' : 'church';
+    document.querySelectorAll('#galleryTabs button').forEach((b) => b.classList.toggle('active', b.dataset.cat === want));
   }
 
   // Gallery: starter templates for the chosen tab, shown in the organization's own style.
@@ -571,7 +603,11 @@ function renderWizard() {
     $('wizHint').textContent = 'Pick one. You can change everything afterwards.';
     const grid = document.createElement('div');
     grid.className = 'choices';
-    for (const t of Wizard.TYPES) {
+    // Put the kind of program this organization makes most first.
+    const types = state.org && state.org.kind === 'school'
+      ? [...Wizard.TYPES].sort((a, b) => (b.id === 'school') - (a.id === 'school'))
+      : Wizard.TYPES;
+    for (const t of types) {
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'choice';
       b.innerHTML = `<b>${Layout.esc(t.label)}</b><small>${Layout.esc(t.desc)}</small>`;
@@ -601,11 +637,15 @@ function renderWizard() {
         <label>Subtitle <input id="wz_sub" type="text" value="${Layout.esc(f.subtitle)}"></label>
         <label>Date <input id="wz_date" type="text" value="${Layout.esc(f.date)}" placeholder="Sunday, January 4, 2026"></label>
         <label>Paper <select id="wz_fmt"></select></label>
+        <label>Cover style <select id="wz_cover"></select></label>
       </div>
       <h3 style="margin-top:14px">It will start with</h3>
       <ol class="outline">${wiz.built.outline.map((h) => `<li>${Layout.esc(h)}</li>`).join('')}</ol>`;
     body.appendChild(box);
     fillSelect($('wz_fmt'), state.catalog.formats);
+    fillSelect($('wz_cover'), Layout.COVER_STYLES, 'id', 'label');
+    $('wz_cover').value = f.coverStyle;
+    $('wz_cover').onchange = () => { f.coverStyle = $('wz_cover').value; };
     $('wz_fmt').value = f.formatId;
     $('wz_title').oninput = () => { f.title = $('wz_title').value; };
     $('wz_sub').oninput = () => { f.subtitle = $('wz_sub').value; };
@@ -656,7 +696,7 @@ function prepareFinish() {
   const keep = wiz.built && wiz.finish._for === JSON.stringify([wiz.type, wiz.answers]);
   wiz.built = built;
   if (!keep) {
-    wiz.finish = { title: built.title, subtitle: built.subtitle, date: '', formatId: built.formatId, _for: JSON.stringify([wiz.type, wiz.answers]) };
+    wiz.finish = { title: built.title, subtitle: built.subtitle, date: '', formatId: built.formatId, coverStyle: built.cover.style, _for: JSON.stringify([wiz.type, wiz.answers]) };
   }
 }
 
@@ -673,7 +713,7 @@ async function createFromWizard() {
       format_id: f.formatId,
       color_id: org.default_color_id,
       weight_id: org.default_weight_id,
-      content: { title: f.title, subtitle: f.subtitle, date: f.date, body: b.body, sheetMode: b.sheetMode }
+      content: { title: f.title, subtitle: f.subtitle, date: f.date, body: b.body, sheetMode: b.sheetMode, cover: wizardCover(b, f.coverStyle) }
     });
     await refreshTemplates(made.id);
     showView('editor');
@@ -702,6 +742,203 @@ function wireHome() {
     wiz.step += 1;
     renderWizard();
   };
+}
+
+// ---------- cover designer ----------
+
+const assetUrlCache = new Map(); // picture id -> data URL (null if missing)
+
+async function assetUrl(id) {
+  if (!id) return null;
+  if (assetUrlCache.has(id)) return assetUrlCache.get(id);
+  const d = await window.api.assets.data(Number(id));
+  const url = d ? `data:${d.mime};base64,${d.base64}` : null;
+  assetUrlCache.set(id, url);
+  return url;
+}
+
+function coverAssetId(content) {
+  const cv = Layout.normCover(content && content.cover);
+  return cv.art.kind === 'asset' && cv.art.id ? Number(cv.art.id) : null;
+}
+const coverUrlSync = (content) => { const id = coverAssetId(content); return id ? assetUrlCache.get(id) || null : null; };
+
+async function refreshCoverUrl() {
+  const id = state.tpl ? coverAssetId(state.tpl.content) : null;
+  state.coverUrl = id ? await assetUrl(id) : null;
+}
+
+// The cover chosen in the wizard: the style the person picked, plus art that suits the program.
+function wizardCover(built, styleId) {
+  const base = built.cover || { style: 'classic', art: { kind: 'none', id: '' } };
+  const style = styleId || base.style;
+  const needsArt = ['picture', 'full', 'banner', 'framed'].includes(style);
+  let art = base.art;
+  if (needsArt && art.kind === 'none') art = { kind: 'builtin', id: Artwork.DEFAULT_FOR[wiz.type === 'school' ? 'school' : wiz.type] || 'cross' };
+  if (!needsArt && style === 'classic') art = base.art;
+  return { ...base, style, art };
+}
+
+function defaultArt() {
+  const kindSchool = state.org && state.org.kind === 'school';
+  return { kind: 'builtin', id: kindSchool ? 'notes' : 'cross' };
+}
+
+// A cover page drawn at true size and shrunk to a given width.
+function coverBox(cover, widthPx) {
+  const org = state.org;
+  const f = formatById(state.tpl.format_id);
+  const geo = Layout.geometry(f);
+  const content = Layout.normContent({ ...state.tpl.content, cover });
+  const W = geo.pageW * Layout.PX_PER_IN, H = geo.pageH * Layout.PX_PER_IN;
+  const k = widthPx / W;
+  const box = document.createElement('div');
+  box.className = 'thumbBox';
+  box.style.width = Math.round(W * k) + 'px';
+  box.style.height = Math.round(H * k) + 'px';
+  const sheet = document.createElement('div');
+  sheet.className = 'sheet';
+  sheet.style.cssText = `width:${W}px;height:${H}px;font-size:${Layout.PX_PER_IN * Layout.EM_IN}px;transform:scale(${k});background:#fff`;
+  Layout.setVars(sheet, org);
+  sheet.innerHTML = Layout.coverPanel({ org, content, logoUrl: state.logoUrl, coverUrl: state.coverUrl }, content);
+  box.appendChild(sheet);
+  return { box, sheet };
+}
+
+const cvState = { images: [] };
+
+function currentCover() { return Layout.normCover(state.tpl.content.cover); }
+
+// Change part of the cover and update the editor behind the dialog.
+function setCover(patch, redraw) {
+  const next = { ...currentCover(), ...patch };
+  state.tpl.content.cover = next;
+  onEdit();
+  if (redraw !== false) renderCoverDialog();
+}
+
+function renderCoverPreviews() {
+  const cover = currentCover();
+  const prev = $('cv_preview');
+  prev.innerHTML = '';
+  const big = coverBox(cover, 290);
+  prev.appendChild(big.box);
+  const sheets = [big.sheet];
+  const cards = $('cv_styles').querySelectorAll('.cvStyle .cvThumb');
+  Layout.COVER_STYLES.forEach((s, i) => {
+    cards[i].innerHTML = '';
+    const t = coverBox({ ...cover, style: s.id }, 82);
+    cards[i].appendChild(t.box);
+    sheets.push(t.sheet);
+  });
+  for (const sh2 of sheets) Layout.fitAll(sh2);
+  const fmt = formatById(state.tpl.format_id);
+  $('cv_note').textContent = (Layout.geometry(fmt).kind === 'flat'
+    ? 'This paper size has no separate cover page. Choose a folded size (a booklet or tri-fold) to use a cover. '
+    : '') + (cover.style === 'full' ? 'A picture that runs to the edge may leave a thin white border on an office printer.' : '');
+}
+
+function renderCoverDialog() {
+  const cover = currentCover();
+  const styles = $('cv_styles');
+  if (!styles.children.length) {
+    for (const s of Layout.COVER_STYLES) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cvStyle';
+      b.dataset.id = s.id;
+      b.innerHTML = `<div class="cvThumb"></div><b>${Layout.esc(s.label)}</b><small>${Layout.esc(s.desc)}</small>`;
+      b.onclick = () => {
+        // Picture layouts look empty without a picture, so offer art that suits.
+        // (Read the cover now, not when the button was made, or it would be out of date.)
+        const now = currentCover();
+        const needs = ['picture', 'full'].includes(s.id) && now.art.kind === 'none';
+        setCover({ style: s.id, ...(needs ? { art: defaultArt() } : {}) });
+      };
+      styles.appendChild(b);
+    }
+  }
+  styles.querySelectorAll('.cvStyle').forEach((b) => b.classList.toggle('on', b.dataset.id === cover.style));
+
+  document.querySelectorAll('#cv_picKind button').forEach((b) => b.classList.toggle('active', b.dataset.k === cover.art.kind));
+  document.querySelectorAll('#cv_emph button').forEach((b) => b.classList.toggle('active', b.dataset.e === cover.emphasis));
+  $('cv_builtin').hidden = cover.art.kind !== 'builtin';
+  $('cv_asset').hidden = cover.art.kind !== 'asset';
+
+  const grid = $('cv_builtin');
+  if (!grid.children.length) {
+    for (const a of Artwork.ART) {
+      const t = document.createElement('button');
+      t.type = 'button';
+      t.className = 'artTile';
+      t.dataset.id = a.id;
+      t.innerHTML = Artwork.svg(a.id) + `<span>${Layout.esc(a.name)}</span>`;
+      t.onclick = () => setCover({ art: { kind: 'builtin', id: a.id } });
+      grid.appendChild(t);
+    }
+  }
+  grid.querySelectorAll('.artTile').forEach((t) => t.classList.toggle('on', cover.art.kind === 'builtin' && t.dataset.id === cover.art.id));
+
+  const sel = $('cv_assetSel');
+  sel.innerHTML = '<option value="">Choose a picture…</option>' +
+    cvState.images.map((i) => `<option value="${i.id}">${Layout.esc(i.name)}</option>`).join('');
+  sel.value = cover.art.kind === 'asset' ? String(cover.art.id) : '';
+
+  const chk = { cv_logo: 'logo', cv_name: 'name', cv_tagline: 'tagline', cv_date: 'date', cv_address: 'address' };
+  for (const [id, key] of Object.entries(chk)) $(id).checked = !!cover.show[key];
+
+  renderCoverPreviews();
+}
+
+async function openCoverDialog() {
+  if (!state.tpl) return;
+  cvState.images = await window.api.assets.list(state.org.id, 'image');
+  const c = currentCover();
+  $('cv_quote').value = c.quote;
+  $('cv_footer').value = c.footer;
+  renderCoverDialog();
+  $('coverDialog').showModal();
+}
+
+function wireCover() {
+  $('coverOpen').onclick = openCoverDialog;
+  $('cv_done').onclick = () => $('coverDialog').close();
+  document.querySelectorAll('#cv_emph button').forEach((b) => { b.onclick = () => setCover({ emphasis: b.dataset.e }); });
+  document.querySelectorAll('#cv_picKind button').forEach((b) => {
+    b.onclick = () => {
+      const k = b.dataset.k;
+      const cur = currentCover();
+      if (k === 'none') setCover({ art: { kind: 'none', id: '' } });
+      else if (k === 'builtin') setCover({ art: { kind: 'builtin', id: cur.art.kind === 'builtin' && cur.art.id ? cur.art.id : defaultArt().id } });
+      else setCover({ art: { kind: 'asset', id: cvState.images[0] ? cvState.images[0].id : '' } });
+      refreshCoverUrl().then(() => { render(); renderCoverDialog(); });
+    };
+  });
+  $('cv_assetSel').onchange = async () => {
+    setCover({ art: { kind: 'asset', id: $('cv_assetSel').value ? Number($('cv_assetSel').value) : '' } }, false);
+    await refreshCoverUrl();
+    render();
+    renderCoverDialog();
+  };
+  $('cv_addPic').onclick = async () => {
+    try {
+      const asset = await window.api.assets.pick(state.org.id, 'image');
+      if (!asset) return;
+      cvState.images = await window.api.assets.list(state.org.id, 'image');
+      setCover({ art: { kind: 'asset', id: asset.id } }, false);
+      await refreshCoverUrl();
+      render();
+      renderCoverDialog();
+    } catch (e) {
+      $('cv_note').textContent = cleanError(e);
+    }
+  };
+  const chk = { cv_logo: 'logo', cv_name: 'name', cv_tagline: 'tagline', cv_date: 'date', cv_address: 'address' };
+  for (const [id, key] of Object.entries(chk)) {
+    $(id).onchange = () => setCover({ show: { ...currentCover().show, [key]: $(id).checked } });
+  }
+  $('cv_quote').addEventListener('input', () => { setCover({ quote: $('cv_quote').value }, false); renderCoverPreviews(); });
+  $('cv_footer').addEventListener('input', () => { setCover({ footer: $('cv_footer').value }, false); renderCoverPreviews(); });
 }
 
 // ---------- organizations ----------
@@ -744,7 +981,8 @@ async function openOrgDialog(orgId) {
   fillSelect($('o_headingFont'), fo);
   fillSelect($('o_bodyFont'), fo);
 
-  const d = org || { name: '', tagline: '', address: '', phone: '', website: '', email: '', primary_color: '#1f3a5f', accent_color: '#b08d3c', heading_font: 'Georgia', body_font: 'Segoe UI', default_format_id: 'letter-bifold', default_color_id: 'white' };
+  const d = org || { kind: 'church', name: '', tagline: '', address: '', phone: '', website: '', email: '', primary_color: '#1f3a5f', accent_color: '#b08d3c', heading_font: 'Georgia', body_font: 'Segoe UI', default_format_id: 'letter-bifold', default_color_id: 'white' };
+  $('o_kind').value = d.kind || 'church';
   $('o_name').value = d.name;
   $('o_tagline').value = d.tagline;
   $('o_address').value = d.address;
@@ -794,7 +1032,7 @@ function showOrgError(msg) {
 async function saveOrg(ev) {
   ev.preventDefault();
   const data = {
-    name: $('o_name').value, tagline: $('o_tagline').value, address: $('o_address').value,
+    kind: $('o_kind').value, name: $('o_name').value, tagline: $('o_tagline').value, address: $('o_address').value,
     phone: $('o_phone').value, website: $('o_website').value, email: $('o_email').value,
     primary_color: $('o_primary').value, accent_color: $('o_accent').value,
     heading_font: $('o_headingFont').value, body_font: $('o_bodyFont').value,
@@ -1039,6 +1277,7 @@ async function init() {
 
   window.addEventListener('resize', () => { if (state.view === 'editor') render(); });
   wireHome();
+  wireCover();
 
   const last = Number(await window.api.settings.get('lastOrg'));
   await refreshOrgs(last || undefined);

@@ -67,11 +67,15 @@ const MIGRATIONS = [
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
   CREATE INDEX org_texts_org ON org_texts(org_id);
+  `,
+  // v3: what kind of organization this is (church, school, other), so the app can show the right tools
+  `
+  ALTER TABLE organizations ADD COLUMN kind TEXT NOT NULL DEFAULT 'church';
   `
 ];
 
 const ORG_FIELDS = [
-  'name', 'tagline', 'address', 'phone', 'website', 'email',
+  'name', 'kind', 'tagline', 'address', 'phone', 'website', 'email',
   'primary_color', 'accent_color', 'heading_font', 'body_font',
   'default_format_id', 'default_color_id', 'default_weight_id', 'logo_asset_id'
 ];

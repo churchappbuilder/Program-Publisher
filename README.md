@@ -28,7 +28,8 @@ accounts, no fees.
 - [x] Worship styles in the wizard: Presbyterian, Anglican, Lutheran (ELCA and LCMS), Methodist, contemporary, simple (Catholic and Orthodox are not planned for now)
 - [ ] Seasons of the church year and lectionary readings
 - [x] School programs: concert, recital, graduation, play, awards night
-- [ ] App icon and Windows installer built automatically on GitHub
+- [x] Cover designer: six layouts, your own pictures or built-in seasonal art
+- [ ] Windows installer built automatically on GitHub
 - [ ] Bleed and crop marks for print shops
 - [ ] macOS version
 

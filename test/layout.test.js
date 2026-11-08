@@ -149,3 +149,51 @@ test('built-in texts all parse and have names and sources', () => {
   assert.ok(BUILTIN_TEXTS.some((t) => /Apostles/.test(t.name)));
   assert.ok(BUILTIN_TEXTS.some((t) => /Nicene/.test(t.name)));
 });
+
+test('covers: normalizing, defaults, and all six layouts render with every option', () => {
+  const c = Layout.normCover(undefined);
+  assert.strictEqual(c.style, 'classic');
+  assert.strictEqual(c.emphasis, 'name');
+  assert.deepStrictEqual(c.art, { kind: 'none', id: '' });
+  assert.strictEqual(c.show.address, false);
+  assert.strictEqual(Layout.normCover({ style: 'nonsense' }).style, 'classic');
+  assert.strictEqual(Layout.normCover({ emphasis: 'title' }).emphasis, 'title');
+  assert.strictEqual(Layout.normCover({ art: { kind: 'bad' } }).art.kind, 'none');
+  assert.strictEqual(Layout.COVER_STYLES.length, 6);
+
+  const org = { name: 'Grace <Church>', tagline: 'A place', address: '1 Main St', phone: '555', website: 'x.org', email: '' };
+  for (const style of Layout.COVER_STYLES.map((s) => s.id)) {
+    for (const art of [{ kind: 'none', id: '' }, { kind: 'builtin', id: 'cross' }, { kind: 'asset', id: 1 }]) {
+      const content = Layout.normContent({ title: 'Morning Worship', subtitle: 'Sub', date: 'Nov 8', cover: { style, art, quote: 'Psalm 95', footer: '8:30 and 11 am', show: { address: true } } });
+      const html = Layout.coverPanel({ org, content, logoUrl: null, coverUrl: 'data:image/png;base64,AAAA' }, content);
+      assert.ok(html.includes('cv-' + style), style);
+      assert.ok(html.includes('emph-name'), style);
+      assert.ok(html.includes('Morning Worship') && html.includes('Nov 8') && html.includes('1 Main St') && html.includes('Psalm 95'), style);
+      assert.ok(html.includes('Grace &lt;Church&gt;') && !html.includes('<Church>'), 'name is escaped');
+      if (art.kind === 'asset') assert.ok(html.includes('data:image/png;base64,AAAA'), style);
+      if (art.kind === 'builtin') assert.ok(html.includes('<svg'), style);
+      if (art.kind === 'none') assert.ok(!html.includes('cvpic') && !html.includes('<svg') && !html.includes('<img'), style);
+    }
+  }
+});
+
+test('covers: the show switches hide things, and emphasis switches the class', () => {
+  const org = { name: 'Grace Church', tagline: 'A place', address: '1 Main St' };
+  const html = (cover) => { const content = Layout.normContent({ title: 'T', date: 'D', cover }); return Layout.coverPanel({ org, content, logoUrl: 'data:image/png;base64,LOGO' }, content); };
+  const all = html({});
+  assert.ok(all.includes('class="logo"') && all.includes('Grace Church') && all.includes('A place') && all.includes('>D<'));
+  assert.ok(!html({ show: { logo: false } }).includes('class="logo"'));
+  assert.ok(!html({ show: { name: false } }).includes('class="org"'));
+  assert.ok(!html({ show: { tagline: false } }).includes('A place'));
+  assert.ok(!html({ show: { date: false } }).includes('class="date"'));
+  assert.ok(!all.includes('1 Main St') && html({ show: { address: true } }).includes('1 Main St'));
+  assert.ok(html({ emphasis: 'title' }).includes('emph-title'));
+});
+
+test('covers: the cover shows up on the cover page of a booklet, and is not used for inserts', () => {
+  const g = Layout.geometry(fmt('letter-bifold'));
+  assert.strictEqual(g.kind, 'booklet');
+  const content = Layout.normContent({ title: 'T', cover: { style: 'banner' } });
+  assert.strictEqual(content.cover.style, 'banner');
+  assert.strictEqual(Layout.normContent({ title: 'T', plain: true }).plain, true);
+});

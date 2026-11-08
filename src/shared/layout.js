@@ -12,9 +12,9 @@
 // The body of a bulletin is plain text with a few simple markers (see parseBody).
 // It is flowed across as many pages as it needs.
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.Layout = factory();
-})(typeof self !== 'undefined' ? self : this, function () {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./artwork'));
+  else root.Layout = factory(root.Artwork);
+})(typeof self !== 'undefined' ? self : this, function (Artwork) {
   const PX_PER_IN = 96;
   const EM_IN = 0.17; // one em of the sheet's font size, in inches
 
@@ -88,7 +88,34 @@
       subtitle: c.subtitle || '',
       date: c.date || '',
       body: c.body != null ? String(c.body) : legacyBody(c),
-      plain: !!c.plain // an insert: just the text, no cover header or page numbers
+      plain: !!c.plain, // an insert: just the text, no cover header or page numbers
+      cover: normCover(c.cover)
+    };
+  }
+
+  // ---------- covers ----------
+  // Six layouts, drawn from how real church and school covers are put together.
+  const COVER_STYLES = [
+    { id: 'classic', label: 'Classic', desc: 'Name, title and date, centered' },
+    { id: 'headerfooter', label: 'Name on top, details below', desc: 'Name and logo at the top, title in the middle, date and address at the bottom' },
+    { id: 'picture', label: 'Picture feature', desc: 'A large picture in the middle with the title around it' },
+    { id: 'full', label: 'Full-page picture', desc: 'The picture fills the cover with the title over it' },
+    { id: 'banner', label: 'Color banner', desc: 'A colored band across the top with your name' },
+    { id: 'framed', label: 'Framed', desc: 'A border around centered text, good with a verse' }
+  ];
+
+  const COVER_DEFAULT_SHOW = { logo: true, name: true, tagline: true, date: true, address: false };
+
+  function normCover(v) {
+    v = v || {};
+    const artKinds = ['none', 'builtin', 'asset'];
+    return {
+      style: COVER_STYLES.some((s) => s.id === v.style) ? v.style : 'classic',
+      art: v.art && artKinds.includes(v.art.kind) ? { kind: v.art.kind, id: v.art.id == null ? '' : v.art.id } : { kind: 'none', id: '' },
+      show: { ...COVER_DEFAULT_SHOW, ...(v.show || {}) },
+      quote: String(v.quote || ''),
+      footer: String(v.footer || ''),
+      emphasis: v.emphasis === 'title' ? 'title' : 'name' // what stands out most: the church or school name, or the program title
     };
   }
 
@@ -272,6 +299,63 @@
       (c.date ? `<div class="date">${esc(c.date)}</div>` : '');
   }
 
+  // ----- cover pieces -----
+  const cvName = (ctx, cv) =>
+    (cv.show.logo ? logoImg(ctx) : '') +
+    (cv.show.name ? `<div class="org">${esc(ctx.org.name)}</div>` : '') +
+    (cv.show.tagline && ctx.org.tagline ? `<div class="tagline">${esc(ctx.org.tagline)}</div>` : '');
+  const cvTitle = (c) => `<h2>${esc(c.title)}</h2>` + (c.subtitle ? `<div class="subtitle">${esc(c.subtitle)}</div>` : '');
+  const cvDate = (c, cv) => (cv.show.date && c.date ? `<div class="date">${esc(c.date)}</div>` : '');
+  const cvQuote = (cv) => (cv.quote.trim() ? `<div class="cvquote">${cv.quote.trim().split('\n').map(inline).join('<br>')}</div>` : '');
+
+  function cvInfo(ctx, cv) {
+    const o = ctx.org;
+    const rows = cv.show.address ? [o.address, o.phone, o.website, o.email].filter(Boolean) : [];
+    const foot = cv.footer.split('\n').map((s) => s.trim()).filter(Boolean);
+    return (foot.length ? `<div class="cvfoot">${foot.map((f) => `<div>${inline(f)}</div>`).join('')}</div>` : '') +
+      (rows.length ? `<div class="cvinfo">${rows.map((r) => `<div>${esc(r)}</div>`).join('')}</div>` : '');
+  }
+
+  // The chosen picture (the church's own, or built-in art that takes the accent color).
+  function cvArt(ctx, cv) {
+    if (cv.art.kind === 'asset' && ctx.coverUrl) return `<img class="cvimg" src="${ctx.coverUrl}" alt="">`;
+    if (cv.art.kind === 'builtin' && Artwork) {
+      const s = Artwork.svg(cv.art.id);
+      if (s) return `<div class="cvart">${s}</div>`;
+    }
+    return '';
+  }
+  const cvPic = (ctx, cv) => { const a = cvArt(ctx, cv); return a ? `<div class="cvpic">${a}</div>` : ''; };
+
+  function coverBody(ctx, c) {
+    const cv = c.cover;
+    const name = cvName(ctx, cv), title = cvTitle(c), date = cvDate(c, cv), quote = cvQuote(cv), info = cvInfo(ctx, cv), pic = cvPic(ctx, cv);
+    const rule = '<div class="rule"></div>';
+    switch (cv.style) {
+      case 'headerfooter':
+        return { cls: 'cv-headerfooter' + (pic ? ' cv-haspic' : ''), html: `<div class="cv-top">${name}</div><div class="cv-mid">${rule}${title}${pic}</div><div class="cv-bot">${date}${quote}${info}</div>` };
+      case 'picture':
+        return { cls: 'cv-picture' + (pic ? '' : ' cv-nopic'), html: `<div class="cv-head">${name}</div>${pic}<div class="cv-titles">${title}${date}</div>${quote}${info}` };
+      case 'full': {
+        const art = cvArt(ctx, cv);
+        const bleed = cv.art.kind === 'asset' && ctx.coverUrl ? `<div class="cv-bleed">${art}</div>` : `<div class="cv-bleed art">${art}</div>`;
+        return { cls: 'cv-full', html: `${bleed}<div class="cv-over"><div class="cv-toptext">${name}</div><div class="cv-band">${title}${date}${quote}${info}</div></div>` };
+      }
+      case 'banner':
+        return { cls: 'cv-banner', html: `<div class="cv-bannerbar">${name}</div><div class="cv-bannerbody">${title}${date}${pic}${quote}${info}</div>` };
+      case 'framed':
+        return { cls: 'cv-framed', html: `<div class="cv-frame">${name}${rule}${title}${date}${pic}${quote}${info}</div>` };
+      default:
+        return { cls: 'cv-classic', html: `${name}${rule}${title}${date}${pic}${quote}${info}` };
+    }
+  }
+
+  // The finished cover page (used by the booklet, and by the cover designer's previews).
+  function coverPanel(ctx, content) {
+    const b = coverBody(ctx, content);
+    return panel('cover', 'cv ' + b.cls + ' emph-' + content.cover.emphasis, b.html, { fit: true });
+  }
+
   function backBlock(ctx) {
     const { org } = ctx;
     const rows = [org.address, org.phone, org.website, org.email].filter(Boolean);
@@ -357,7 +441,7 @@
     } else {
       const flow = done.length === 1 && done[0].length === 0 ? [] : done;
       const notes = (num) => ({ role: 'notes', panel: panel('notes', 'flow', '<h3 class="sec">Notes</h3><div class="lines"></div>', { num }) });
-      const cover = { role: 'cover', panel: panel('cover', 'center', headBlock(c, content), { fit: true }) };
+      const cover = { role: 'cover', panel: coverPanel(c, content) };
       const back = { role: 'back', panel: panel('back', 'center', backBlock(c), { fit: true }) };
       const flowPage = (list, num) => ({ role: 'flow', panel: panel('flow', 'flow', flowHtml(list), { num }) });
 
@@ -399,5 +483,5 @@
     return overflow;
   }
 
-  return { PX_PER_IN, EM_IN, geometry, impose, normContent, clearWeekly, insertFormatId, classifyLine, parseItemLine, formatItemLine, parseBody, paginate, sideHtml, pageHtml, fitAll, setVars, esc };
+  return { PX_PER_IN, EM_IN, COVER_STYLES, normCover, coverPanel, geometry, impose, normContent, clearWeekly, insertFormatId, classifyLine, parseItemLine, formatItemLine, parseBody, paginate, sideHtml, pageHtml, fitAll, setVars, esc };
 });

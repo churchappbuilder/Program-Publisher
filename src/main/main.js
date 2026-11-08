@@ -67,10 +67,16 @@ async function exportPdf({ templateId, mode, includeColor, filePath }) {
     const d = db.getAssetData(org.logo_asset_id);
     if (d) logoUrl = `data:${d.mime};base64,${d.base64}`;
   }
+  let coverUrl = null;
+  const cv = tpl.content && tpl.content.cover;
+  if (cv && cv.art && cv.art.kind === 'asset' && cv.art.id) {
+    const d = db.getAssetData(Number(cv.art.id));
+    if (d) coverUrl = `data:${d.mime};base64,${d.base64}`;
+  }
   const fonts = db.listAssets(org.id, 'font').map((a) => ({ name: a.name, ...db.getAssetData(a.id) }));
 
   const job = {
-    format, org, content: tpl.content, logoUrl, fonts,
+    format, org, content: tpl.content, logoUrl, coverUrl, fonts,
     mode: mode === 'pages' ? 'pages' : 'sheets',
     // Paper color is normally left out: you print on colored stock, you don't print the color.
     paperHex: includeColor && color ? color.hex : '#ffffff'
@@ -143,7 +149,7 @@ function registerIpc() {
     const exts = kind === 'font' ? FONT_EXT : IMAGE_EXT;
     const win = BrowserWindow.fromWebContents(e.sender);
     const res = await dialog.showOpenDialog(win, {
-      title: kind === 'font' ? 'Choose a font file' : 'Choose a logo image',
+      title: kind === 'font' ? 'Choose a font file' : kind === 'image' ? 'Choose a picture' : 'Choose a logo image',
       properties: ['openFile'],
       filters: [{ name: kind === 'font' ? 'Fonts' : 'Images', extensions: Object.keys(exts) }]
     });
@@ -207,4 +213,4 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-module.exports = { exportPdf };
+module.exports = { exportPdf, _db: () => db }; // _db is for the automated tests

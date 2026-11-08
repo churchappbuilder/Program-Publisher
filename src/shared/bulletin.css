@@ -60,3 +60,93 @@ h2 { font-family: var(--heading-font); font-size: 1.5em; margin: 0 0 .3em; line-
 }
 .lines { flex: 1; min-height: 6em; margin-top: .2em; }
 .notelines { margin: .3em 0 .8em; }
+
+/* ---------- covers ---------- */
+.cv-classic .inner, .panel.cv-classic .inner { justify-content: center; }
+.inner > .cvpic { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; margin: .7em 0; overflow: hidden; }
+.cvpic img.cvimg { max-width: 100%; max-height: 100%; object-fit: contain; }
+.cvart { width: 62%; height: 100%; color: var(--accent); }
+.cvart svg { width: 100%; height: 100%; display: block; }
+.cv-classic .cvpic { flex: 0 0 11em; }
+.cvquote { font-size: .62em; font-style: italic; line-height: 1.5; margin: .9em auto .3em; max-width: 90%; }
+.cvfoot { font-size: .62em; line-height: 1.6; margin-top: .7em; }
+.cvinfo { font-size: .58em; line-height: 1.6; margin-top: .6em; opacity: .85; }
+
+/* name on top, title in the middle, date and address at the bottom */
+.inner > .cv-top, .inner > .cv-mid, .inner > .cv-bot { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; min-height: 0; }
+.inner > .cv-top { justify-content: flex-start; }
+.inner > .cv-mid { justify-content: center; }
+.inner > .cv-bot { justify-content: flex-end; }
+.cv-mid .cvpic { flex: 1 1 auto; width: 100%; }
+
+/* picture feature */
+.cv-picture .inner { justify-content: flex-start; }
+.inner > .cv-head, .inner > .cv-titles { flex: 0 0 auto; }
+.cv-picture .cvpic { margin: .6em 0 .9em; }
+
+/* full-page picture: the picture runs to the edge, the text sits on a band */
+.panel.cv-full { padding: 0; }
+.cv-full .inner { position: relative; color: #fff; }
+.cv-full .cv-bleed { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: var(--primary); }
+.cv-full .cv-bleed img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cv-full .cv-bleed.art { display: flex; align-items: center; justify-content: center; color: var(--accent); background: linear-gradient(180deg, var(--primary), #000 220%); }
+.cv-full .cv-bleed.art .cvart { width: 64%; height: 64%; opacity: .95; }
+.inner > .cv-over { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 1.7em; }
+.cv-full .org, .cv-full .tagline { color: #fff; text-shadow: 0 0 .5em rgba(0, 0, 0, .75); opacity: 1; }
+.cv-full .cv-band { background: rgba(0, 0, 0, .58); padding: 1em 1em .8em; border-radius: .3em; }
+.cv-full h2, .cv-full .subtitle, .cv-full .date, .cv-full .cvquote, .cv-full .cvfoot, .cv-full .cvinfo { color: #fff; opacity: 1; }
+.cv-full .rule { background: #fff; }
+
+/* color banner across the top */
+.panel.cv-banner { padding: 0; }
+.cv-banner .inner { justify-content: flex-start; }
+.inner > .cv-bannerbar { background: var(--primary); color: #fff; padding: 1.6em 1.9em 1.4em; }
+.cv-bannerbar .org, .cv-bannerbar .tagline { color: #fff; opacity: 1; }
+.inner > .cv-bannerbody { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 1.4em 1.9em 1.9em; justify-content: center; }
+.cv-bannerbody .cvpic { margin: .8em 0; }
+
+/* framed with a double border */
+.panel.cv-framed { padding: 1.2em; }
+.inner > .cv-frame { height: 100%; border: .22em double var(--primary); padding: 1.2em 1.1em; display: flex; flex-direction: column; justify-content: center; box-sizing: border-box; }
+.cv-frame .cvpic { flex: 0 1 11em; }
+
+/* pictures never push the text around: they fill whatever space is left */
+.inner > .cvpic, .cv-frame > .cvpic, .cv-bannerbody > .cvpic, .cv-mid > .cvpic { position: relative; }
+.cvpic > * { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.cvpic img.cvimg { max-width: none; max-height: none; object-fit: contain; }
+.cvpic .cvart { display: flex; align-items: center; justify-content: center; }
+.cvpic .cvart svg { width: 62%; height: 100%; }
+
+/* cover type is larger than page type */
+.cv h2 { font-size: 2.15em; line-height: 1.12; }
+.cv .subtitle { font-size: .95em; }
+.cv .date { font-size: .85em; }
+.cv .org { font-size: .82em; }
+.cv .tagline { font-size: .66em; }
+.cv .logo { max-height: 5em; max-width: 70%; }
+.cv-bannerbar .org { font-size: 1em; }
+
+/* picture space inside the banner and name-on-top layouts */
+.cv-bannerbody > .cvpic { flex: 1 1 auto; min-height: 8em; }
+.cv-mid > .cvpic { flex: 1 1 auto; min-height: 6em; }
+.inner > .cv-over { box-sizing: border-box; }
+.cv-haspic .cv-top { flex: .7 1 0; }
+.cv-haspic .cv-mid { flex: 2.2 1 0; }
+.cv-haspic .cv-bot { flex: .9 1 0; }
+
+/* full-page layout: built-in art sits above the text band */
+.cv-full .cv-bleed.art { align-items: flex-start; }
+.cv-full .cv-bleed.art .cvart { width: 56%; height: 48%; margin-top: 16%; }
+
+/* the name of the church or school leads; the program title is the smaller line */
+.cv.emph-name .org { font-family: var(--heading-font); font-size: 1.8em; line-height: 1.1; letter-spacing: .01em; text-transform: none; font-weight: 700; }
+.cv.emph-name .tagline { font-size: .74em; margin-top: .35em; }
+.cv.emph-name h2 { font-size: 1.1em; font-weight: 600; line-height: 1.2; margin: 0 0 .25em; }
+.cv.emph-name .subtitle { font-size: .8em; }
+.cv.emph-name .date { font-size: .78em; }
+.cv.emph-name .cv-bannerbar .org { font-size: 1.55em; }
+.cv.emph-name .rule { margin: .8em auto; }
+.cv.emph-name .logo { max-height: 5.4em; }
+
+.cv-nopic .inner { justify-content: center; }
+.cv-head { margin-bottom: .6em; }
