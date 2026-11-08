@@ -16,6 +16,8 @@ const state = {
   catechisms: [],     // available catechisms
   logoUrl: null,      // data URL of current org's logo
   side: 0,            // which side of the sheet the preview shows (0 outside, 1 inside)
+  view: 'home',       // which screen is showing: home | wizard | editor
+  caret: null,        // last cursor position in the body text box (null = add things at the end)
   dialogOrgId: null   // org being edited in the dialog (null = new)
 };
 
@@ -163,6 +165,8 @@ function fillEditor(tpl) {
   $('date').value = tpl.content.date || '';
   $('body').value = Layout.normContent(tpl.content).body; // older templates are converted on the fly
   state.side = 0;
+  state.caret = null;
+  $('stageMsg').textContent = '';
   $('editor').classList.toggle('isInsert', !!tpl.content.plain);
   $('format').value = tpl.format_id;
   $('color').value = tpl.color_id;
@@ -234,8 +238,11 @@ function findText(value) {
 // Put text into the body at the cursor, separated from its neighbors by blank lines.
 function insertIntoBody(text) {
   const ta = $('body');
-  const before = ta.value.slice(0, ta.selectionStart).replace(/\n*$/, '');
-  const after = ta.value.slice(ta.selectionEnd).replace(/^\n*/, '');
+  // If the person was typing in the text box, add it where they left the cursor.
+  // Otherwise (they just pressed a button) add it at the end, never in a surprising place.
+  const at = state.caret || { s: ta.value.length, e: ta.value.length };
+  const before = ta.value.slice(0, at.s).replace(/\n*$/, '');
+  const after = ta.value.slice(at.e).replace(/^\n*/, '');
   const head = before ? before + '\n\n' : '';
   ta.value = head + text.trim() + (after ? '\n\n' + after : '\n');
   const caret = (head + text.trim()).length + 1;
@@ -422,6 +429,281 @@ function wireSheet() {
   };
 }
 
+// ---------- views: start screen, new-program wizard, editor ----------
+
+function showView(name) {
+  state.view = name;
+  $('homeView').hidden = name !== 'home';
+  $('wizardView').hidden = name !== 'wizard';
+  $('editorView').hidden = name !== 'editor';
+  $('homeBtn').hidden = name === 'home';
+  $('homeView').scrollTop = 0;
+  $('wizardView').scrollTop = 0;
+  if (name === 'editor') render();   // sizes are only known once the editor is visible
+  if (name === 'home') renderHome();
+}
+
+// Open one of the current church's templates in the editor.
+function openTemplate(id) {
+  showView('editor');
+  const t = state.templates.find((x) => x.id === id);
+  if (!t) return;
+  $('tplSelect').value = t.id;
+  fillEditor(t);
+}
+
+// A small picture of a template, using the organization's own logo, colors and fonts.
+// It is laid out at true size and shrunk, so it matches what will print.
+function makeThumb(format, colorId, content) {
+  const org = state.org;
+  const geo = Layout.geometry(format);
+  const layout = Layout.paginate(document, geo, { org, content, logoUrl: state.logoUrl });
+  const side = geo.kind !== 'flat' && layout.sides.length > 1 ? 1 : 0; // show the inside of folded pieces
+  const W = format.width * Layout.PX_PER_IN, H = format.height * Layout.PX_PER_IN;
+  const k = Math.min(176 / W, 132 / H);
+  const color = state.catalog.colors.find((c) => c.id === colorId) || state.catalog.colors[0];
+
+  const box = document.createElement('div');
+  box.className = 'thumbBox';
+  box.style.width = Math.round(W * k) + 'px';
+  box.style.height = Math.round(H * k) + 'px';
+  const sheet = document.createElement('div');
+  sheet.className = 'sheet';
+  sheet.style.width = W + 'px';
+  sheet.style.height = H + 'px';
+  sheet.style.background = color.hex;
+  sheet.style.fontSize = Layout.PX_PER_IN * Layout.EM_IN + 'px';
+  sheet.style.transform = `scale(${k})`;
+  Layout.setVars(sheet, org);
+  sheet.innerHTML = Layout.sideHtml(layout, side);
+  box.appendChild(sheet);
+  return { box, sheet };
+}
+
+function makeCard(title, sub, thumb, onClick) {
+  const card = document.createElement('button');
+  card.type = 'button';
+  card.className = 'card';
+  const t = document.createElement('div');
+  t.className = 'thumb';
+  t.appendChild(thumb.box);
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  const b = document.createElement('b'); b.textContent = title;
+  const s = document.createElement('small'); s.textContent = sub;
+  meta.append(b, s);
+  card.append(t, meta);
+  card.onclick = onClick;
+  return card;
+}
+
+function formatById(id) {
+  return state.catalog.formats.find((f) => f.id === id) || state.catalog.formats.find((f) => f.id === 'letter-bifold');
+}
+
+function renderHome() {
+  const org = state.org;
+  $('homeGreeting').textContent = org ? org.name : 'Welcome to Program Publisher';
+  const recent = $('recentList');
+  const gallery = $('galleryList');
+  recent.innerHTML = '';
+  gallery.innerHTML = '';
+  if (!org) {
+    recent.innerHTML = '<p class="emptyNote">Add an organization to get started.</p>';
+    return;
+  }
+
+  // Recent: this organization's templates, newest edit first.
+  const rec = [...state.templates].sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at))).slice(0, 5);
+  if (!rec.length) recent.innerHTML = '<p class="emptyNote">Nothing here yet. Start a new program, or pick a template below.</p>';
+  const thumbs = [];
+  for (const t of rec) {
+    const th = makeThumb(formatById(t.format_id), t.color_id, t.content);
+    const when = new Date(String(t.updated_at).replace(' ', 'T') + 'Z');
+    const card = makeCard(t.name, 'Edited ' + (isNaN(when) ? '' : when.toLocaleDateString()), th, () => openTemplate(t.id));
+    recent.appendChild(card);
+    thumbs.push(th);
+  }
+
+  // Gallery: starter templates for the chosen tab, shown in the organization's own style.
+  const cat = document.querySelector('#galleryTabs button.active').dataset.cat;
+  for (const s of state.serviceTypes.filter((x) => x.category === cat || x.category === 'both')) {
+    const th = makeThumb(formatById(org.default_format_id), org.default_color_id, { title: s.title, subtitle: s.subtitle, date: '', body: s.body });
+    gallery.appendChild(makeCard(s.label, s.desc, th, async () => {
+      const made = await window.api.templates.create(org.id, s.id);
+      await refreshTemplates(made.id);
+      showView('editor');
+    }));
+    thumbs.push(th);
+  }
+  for (const th of thumbs) Layout.fitAll(th.sheet); // covers and back pages need the page attached to measure
+}
+
+// ---------- new program wizard ----------
+
+const wiz = { step: 1, type: null, answers: {}, finish: { title: '', subtitle: '', date: '', formatId: 'letter-bifold' }, built: null };
+
+function wizSteps() {
+  return wiz.type === 'other' ? ['What is it?', 'Create'] : ['What is it?', 'Details', 'Create'];
+}
+
+function startWizard() {
+  wiz.step = 1; wiz.type = null; wiz.answers = {}; wiz.built = null;
+  showView('wizard');
+  renderWizard();
+}
+
+function visibleQuestions() {
+  return (Wizard.QUESTIONS[wiz.type] || []).filter((q) => !q.showIf || q.showIf(wiz.answers));
+}
+
+function renderWizard() {
+  const names = wizSteps();
+  const finishStep = names.length;
+  $('wizSteps').innerHTML = names.map((n, i) => `<span class="${i + 1 === wiz.step ? 'on' : i + 1 < wiz.step ? 'done' : ''}">${i + 1}. ${Layout.esc(n)}</span>`).join('');
+  const body = $('wizBody');
+  body.innerHTML = '';
+  $('wizBack').hidden = false;
+  $('wizNext').hidden = false;
+
+  if (wiz.step === 1) {
+    $('wizTitle').textContent = 'What are you making?';
+    $('wizHint').textContent = 'Pick one. You can change everything afterwards.';
+    const grid = document.createElement('div');
+    grid.className = 'choices';
+    for (const t of Wizard.TYPES) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'choice';
+      b.innerHTML = `<b>${Layout.esc(t.label)}</b><small>${Layout.esc(t.desc)}</small>`;
+      b.onclick = () => {
+        wiz.type = t.id;
+        wiz.answers = Wizard.defaults(t.id);
+        wiz.step = 2;
+        if (t.id === 'other') { wiz.step = 2; prepareFinish(); }
+        renderWizard();
+      };
+      grid.appendChild(b);
+    }
+    body.appendChild(grid);
+    $('wizNext').hidden = true;
+    return;
+  }
+
+  if (wiz.step === finishStep) {
+    prepareFinish();
+    $('wizTitle').textContent = 'Ready to create';
+    $('wizHint').textContent = 'This sets up a starting point. You will edit everything on the next screen.';
+    const f = wiz.finish;
+    const box = document.createElement('div');
+    box.className = 'finish';
+    box.innerHTML = `<div class="grid2">
+        <label>Title <input id="wz_title" type="text" value="${Layout.esc(f.title)}"></label>
+        <label>Subtitle <input id="wz_sub" type="text" value="${Layout.esc(f.subtitle)}"></label>
+        <label>Date <input id="wz_date" type="text" value="${Layout.esc(f.date)}" placeholder="Sunday, January 4, 2026"></label>
+        <label>Paper <select id="wz_fmt"></select></label>
+      </div>
+      <h3 style="margin-top:14px">It will start with</h3>
+      <ol class="outline">${wiz.built.outline.map((h) => `<li>${Layout.esc(h)}</li>`).join('')}</ol>`;
+    body.appendChild(box);
+    fillSelect($('wz_fmt'), state.catalog.formats);
+    $('wz_fmt').value = f.formatId;
+    $('wz_title').oninput = () => { f.title = $('wz_title').value; };
+    $('wz_sub').oninput = () => { f.subtitle = $('wz_sub').value; };
+    $('wz_date').oninput = () => { f.date = $('wz_date').value; };
+    $('wz_fmt').onchange = () => { f.formatId = $('wz_fmt').value; };
+    $('wizNext').textContent = 'Create program';
+    return;
+  }
+
+  // Details: the questions for this kind of program.
+  $('wizTitle').textContent = Wizard.TYPES.find((t) => t.id === wiz.type).label;
+  $('wizHint').textContent = 'Answer what applies. Anything you skip can be added or removed later.';
+  $('wizNext').textContent = 'Next';
+  for (const q of visibleQuestions()) {
+    const fs = document.createElement('fieldset');
+    fs.className = 'q';
+    fs.innerHTML = `<legend>${Layout.esc(q.label)}</legend>` + (q.hint ? `<p class="hint">${Layout.esc(q.hint)}</p>` : '');
+    const opts = document.createElement('div');
+    opts.className = 'opts';
+    for (const o of q.options) {
+      const label = document.createElement('label');
+      label.className = 'opt';
+      const input = document.createElement('input');
+      input.type = q.kind === 'single' ? 'radio' : 'checkbox';
+      input.name = 'wq_' + q.id;
+      input.value = o.id;
+      input.checked = q.kind === 'single' ? wiz.answers[q.id] === o.id : (wiz.answers[q.id] || []).includes(o.id);
+      input.onchange = () => {
+        if (q.kind === 'single') { wiz.answers[q.id] = o.id; renderWizard(); }
+        else {
+          const cur = new Set(wiz.answers[q.id] || []);
+          if (input.checked) cur.add(o.id); else cur.delete(o.id);
+          wiz.answers[q.id] = [...cur];
+        }
+      };
+      label.append(input, document.createTextNode(o.label));
+      opts.appendChild(label);
+    }
+    fs.appendChild(opts);
+    body.appendChild(fs);
+  }
+}
+
+// Build the starting bulletin from the answers so far; keep the title/date the person edits.
+function prepareFinish() {
+  const textsById = Object.fromEntries(state.builtin.map((t) => [t.id, t]));
+  const built = Wizard.build(wiz.type, wiz.answers, textsById);
+  const keep = wiz.built && wiz.finish._for === JSON.stringify([wiz.type, wiz.answers]);
+  wiz.built = built;
+  if (!keep) {
+    wiz.finish = { title: built.title, subtitle: built.subtitle, date: '', formatId: built.formatId, _for: JSON.stringify([wiz.type, wiz.answers]) };
+  }
+}
+
+async function createFromWizard() {
+  const org = state.org;
+  const f = wiz.finish;
+  const b = wiz.built;
+  $('wizNext').disabled = true;
+  try {
+    const t = await window.api.templates.create(org.id, 'general');
+    const made = await window.api.templates.update(t.id, {
+      name: b.name,
+      service_type: wiz.type,
+      format_id: f.formatId,
+      color_id: org.default_color_id,
+      weight_id: org.default_weight_id,
+      content: { title: f.title, subtitle: f.subtitle, date: f.date, body: b.body, sheetMode: b.sheetMode }
+    });
+    await refreshTemplates(made.id);
+    showView('editor');
+  } finally {
+    $('wizNext').disabled = false;
+  }
+}
+
+function wireHome() {
+  $('homeBtn').onclick = () => showView('home');
+  $('newProgram').onclick = () => { if (state.org) startWizard(); else openOrgDialog(null); };
+  $('allTemplates').onclick = () => { if (state.org) showView('editor'); };
+  for (const b of document.querySelectorAll('#galleryTabs button')) {
+    b.onclick = () => {
+      document.querySelectorAll('#galleryTabs button').forEach((x) => x.classList.toggle('active', x === b));
+      renderHome();
+    };
+  }
+  $('wizBack').onclick = () => {
+    if (wiz.step <= 1) { showView('home'); return; }
+    wiz.step -= 1;
+    renderWizard();
+  };
+  $('wizNext').onclick = async () => {
+    if (wiz.step === wizSteps().length) { await createFromWizard(); return; }
+    wiz.step += 1;
+    renderWizard();
+  };
+}
+
 // ---------- organizations ----------
 
 async function selectOrg(id) {
@@ -438,6 +720,7 @@ async function selectOrg(id) {
   refreshTextSelect();
   $('orgManage').disabled = !state.org;
   await refreshTemplates();
+  if (state.view === 'home') renderHome(); // a different church has its own logo, colors and recent templates
 }
 
 async function refreshOrgs(selectId) {
@@ -450,7 +733,7 @@ async function refreshOrgs(selectId) {
 async function openOrgDialog(orgId) {
   state.dialogOrgId = orgId;
   const org = orgId ? state.orgs.find((o) => o.id === orgId) : null;
-  $('orgDialogTitle').textContent = org ? 'Edit organization' : 'New organization';
+  $('orgDialogTitle').textContent = org ? 'Edit your church or school' : 'Set up your church or school';
   $('orgError').hidden = true;
   $('orgDelete').hidden = !org;
 
@@ -678,11 +961,20 @@ async function init() {
       onEdit();
     });
   }
-  $('exportBtn').onclick = async () => {
+  // Keep track of where the person last put the cursor in the text box.
+  for (const evName of ['keyup', 'click', 'select', 'input']) {
+    $('body').addEventListener(evName, () => {
+      const ta = $('body');
+      state.caret = { s: ta.selectionStart, e: ta.selectionEnd };
+    });
+  }
+
+  $('savePdf').onclick = async () => {
     if (!state.tpl) return;
-    const msg = $('exportMsg');
-    $('exportBtn').disabled = true;
-    msg.textContent = 'Preparing PDF…';
+    const msg = $('stageMsg');
+    msg.className = 'hint ok';
+    $('savePdf').disabled = true;
+    msg.textContent = 'Getting your PDF ready…';
     try {
       await saveTemplate.flush();
       const r = await window.api.exportPdf(state.tpl.id, {
@@ -691,15 +983,16 @@ async function init() {
       });
       if (!r) msg.textContent = '';
       else {
-        const f = state.catalog.formats.find((x) => x.id === state.tpl.format_id);
-        msg.textContent = `Saved ${r.sheets} PDF page${r.sheets === 1 ? '' : 's'}.` +
-          (r.foldNote ? ' Print double-sided, flipping on the short edge, then fold.' : '') +
-          (r.overflow ? ' Warning: some text was too long and may be cut off.' : '');
+        msg.textContent = 'Saved! ' +
+          (r.foldNote ? 'Print it on both sides of the paper (flip on the short edge), then fold it.' : 'It is ready to print.') +
+          (r.overflow ? ' Warning: some text was too long and may be cut off. Shorten it or choose a bigger paper size.' : '');
+        if (r.overflow) msg.className = 'hint bad';
       }
     } catch (e) {
-      msg.textContent = 'Export failed: ' + e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
+      msg.className = 'hint bad';
+      msg.textContent = 'Sorry, the PDF could not be saved. ' + cleanError(e);
     } finally {
-      $('exportBtn').disabled = false;
+      $('savePdf').disabled = false;
     }
   };
   $('tplSelect').addEventListener('change', () => {
@@ -744,10 +1037,12 @@ async function init() {
     await refreshOrgs();
   };
 
-  window.addEventListener('resize', render);
+  window.addEventListener('resize', () => { if (state.view === 'editor') render(); });
+  wireHome();
 
   const last = Number(await window.api.settings.get('lastOrg'));
   await refreshOrgs(last || undefined);
+  showView('home');
   if (state.orgs.length === 0) openOrgDialog(null);
 }
 

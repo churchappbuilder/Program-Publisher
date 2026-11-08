@@ -4,6 +4,18 @@ All notable changes to Program Publisher. Versions follow [Semantic Versioning](
 while the app is below 1.0, new features bump the middle number (0.2.0 → 0.3.0) and fixes bump the last (0.2.0 → 0.2.1).
 The version shows in the app under the title and in the installer file name.
 
+## 0.4.0 — 2026-11-08
+### Added
+- Start screen, like Word's: a **New program** tile, your **recent** programs beside it, and a gallery of starter templates split into **Church** and **School**. Every picture uses your own logo, colors and fonts.
+- **New program wizard**: asks what you are making (church service, funeral, wedding, school program, other), then the style, music and speaking, and builds a starting program.
+- Worship styles in the wizard, drawn from real bulletins: Presbyterian / Reformed, Anglican / Episcopal, Lutheran (ELCA), Lutheran (LCMS Divine Service), Methodist, Contemporary and Simple. Hymn placeholders use the right hymnal (ELW, LSB, UMH).
+- School programs: concert (band, choir, orchestra, jazz, soloists), recital, graduation, play and awards night, with optional roster, sponsors, program notes and upcoming events.
+- More starter templates: Communion Sunday, Christmas Eve, Recital, Graduation, Play, Awards night.
+
+### Changed
+- Plainer wording throughout and a simpler editor: three numbered steps (About this program, This week's service, Paper), a large **Save as PDF** button beside the preview, and the text-formatting box moved under "Advanced".
+- Adding a creed, prayer or catechism questions now puts it at the end of the service unless you were typing in the text box.
+- "Set up your church or school" welcome when you first open the app.
 ## 0.3.0 — 2026-11-08
 ### Added
 - Weekly fill-in sheet: a spreadsheet-style grid for each week's hymn numbers, readings, preacher and standing marks (▲). It edits the same text as the body box, so prayers and other text stay untouched. Paste a block of cells straight from Excel or Google Sheets, or copy the rows out as a table.

@@ -24,9 +24,10 @@ accounts, no fees.
 - [x] Text library: built-in public-domain texts (creeds, Lord's Prayer, Ten Commandments, benedictions, ...) plus a per-church library, loose inserts, and a "Next week" button
 - [x] Catechism picker (Westminster Shorter and Larger, Heidelberg, Baptist 1693) by question number or range
 - [x] Weekly fill-in sheet: spreadsheet-style entry for hymns, readings, pieces and composers, with paste from Excel
-- [ ] Worship traditions: liturgical (Anglican/Episcopal, Presbyterian, Lutheran, Catholic, Methodist, Orthodox) and free-form styles, each with a matching order of service
-- [ ] Responsive readings (Leader / People), seasons of the church year, lectionary readings
-- [ ] Wider scope than churches: school programs, concerts, recitals, events
+- [x] Start screen (new program, recent, church and school templates) and a New program wizard
+- [x] Worship styles in the wizard: Presbyterian, Anglican, Lutheran (ELCA and LCMS), Methodist, contemporary, simple (Catholic and Orthodox are not planned for now)
+- [ ] Seasons of the church year and lectionary readings
+- [x] School programs: concert, recital, graduation, play, awards night
 - [ ] App icon and Windows installer built automatically on GitHub
 - [ ] Bleed and crop marks for print shops
 - [ ] macOS version
