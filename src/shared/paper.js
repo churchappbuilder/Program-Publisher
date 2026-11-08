@@ -10,9 +10,11 @@ const FORMATS = [
   { id: 'tabloid', name: 'Tabloid (11 × 17)', width: 11, height: 17, panels: 1, note: 'Ledger/tabloid, flat.' },
   { id: 'a4', name: 'A4 (210 × 297 mm)', width: 8.27, height: 11.69, panels: 1, note: 'International standard.' },
   { id: 'a5', name: 'A5 (148 × 210 mm)', width: 5.83, height: 8.27, panels: 1, note: 'Half of A4.' },
-  { id: 'letter-bifold', name: 'Letter bi-fold booklet (folds to 5.5 × 8.5)', width: 11, height: 8.5, panels: 2, note: 'Letter sheet folded in half; 4 pages.' },
-  { id: 'legal-bifold', name: 'Legal bi-fold booklet (folds to 7 × 8.5)', width: 14, height: 8.5, panels: 2, note: 'Legal sheet folded in half; 4 pages.' },
-  { id: 'tabloid-bifold', name: 'Tabloid bi-fold booklet (folds to 8.5 × 11)', width: 17, height: 11, panels: 2, note: 'Tabloid sheet folded in half; 4 pages.' },
+  { id: 'letter-bifold', name: 'Letter bi-fold booklet (folds to 5.5 × 8.5)', width: 11, height: 8.5, panels: 2, note: 'Letter sheets folded in half. Grows in steps of 4 pages (4, 8, 12 …), stapled in the middle.' },
+  { id: 'legal-bifold', name: 'Legal bi-fold booklet (folds to 7 × 8.5)', width: 14, height: 8.5, panels: 2, note: 'Legal sheets folded in half; 4 pages, or more nested sheets.' },
+  { id: 'tabloid-bifold', name: 'Tabloid bi-fold booklet (folds to 8.5 × 11)', width: 17, height: 11, panels: 2, note: 'Tabloid sheet folded in half; 4 pages, or more nested sheets.' },
+  { id: 'a4-bifold', name: 'A4 bi-fold booklet (folds to A5)', width: 11.69, height: 8.27, panels: 2, note: 'A4 sheet folded in half.' },
+  { id: 'a3-bifold', name: 'A3 bi-fold booklet (folds to A4)', width: 16.54, height: 11.69, panels: 2, note: 'A3 sheet folded in half.' },
   { id: 'letter-trifold', name: 'Letter tri-fold (folds to 3.67 × 8.5)', width: 11, height: 8.5, panels: 3, note: 'Letter sheet in thirds; 6 panels.' },
   { id: 'legal-trifold', name: 'Legal tri-fold (folds to 4.67 × 8.5)', width: 14, height: 8.5, panels: 3, note: 'Legal sheet in thirds; 6 panels.' }
 ];

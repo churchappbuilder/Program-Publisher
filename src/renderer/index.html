@@ -37,15 +37,36 @@
       <label>Title <input id="title" type="text"></label>
       <label>Subtitle <input id="subtitle" type="text"></label>
       <label>Date <input id="date" type="text" placeholder="Sunday, January 4, 2026"></label>
-      <label>Welcome message
-        <textarea id="welcome" rows="3"></textarea>
-      </label>
-      <label>Order of service (one per line)
-        <textarea id="items" rows="8"></textarea>
-      </label>
-      <label>Announcements (one per line)
-        <textarea id="announcements" rows="5"></textarea>
-      </label>
+      <label for="body">Body: the service, readings, announcements</label>
+      <div class="snips" id="snips">
+        <button type="button" class="btn small" data-snip="# Section heading">Section</button>
+        <button type="button" class="btn small" data-snip="Hymn | Title | Number">Hymn</button>
+        <button type="button" class="btn small" data-snip="+ Standing item |">Stand ▲</button>
+        <button type="button" class="btn small" data-snip="Leader: &#10;People: ">Leader/People</button>
+        <button type="button" class="btn small" data-snip="> Please stand.">Instruction</button>
+        <button type="button" class="btn small" data-snip="- Announcement">Bullet</button>
+        <button type="button" class="btn small" data-snip="[notes]">Notes lines</button>
+        <button type="button" class="btn small" data-snip="===">Page break</button>
+      </div>
+      <textarea id="body" rows="18" class="mono" spellcheck="true"></textarea>
+      <details class="help">
+        <summary>Formatting help</summary>
+        <pre># Section heading
+## Smaller heading
+Prelude |                    a line with nothing on the right
+Sermon | | Pastor Smith     detail on the right
+Hymn | Holy, Holy, Holy | 77 name in the middle, number on the right
++ Opening Hymn | | 382      + puts a standing mark ▲ in front
+&gt; Please stand.             instruction in italics
+Leader: The Lord be with you.
+People: And also with you.  People/All are bold
+- Announcement bullet
+^ Centered text
+[notes] or [notes 8]        ruled writing lines
+===                         start a new page
+**bold**   *italic*         inside any line
+Plain lines make a paragraph; line breaks are kept.</pre>
+      </details>
 
       <h3>Paper</h3>
       <label>Format <select id="format"></select></label>
@@ -68,9 +89,10 @@
 
   <main class="stage">
     <div id="empty" class="empty" hidden>Create an organization to get started.</div>
-    <div id="sideToggle" class="toggle" hidden>
-      <button type="button" data-side="0" class="active">Outside</button>
-      <button type="button" data-side="1">Inside</button>
+    <div id="stepper" class="toggle" hidden>
+      <button type="button" id="stepPrev" title="Previous side">◀</button>
+      <span id="stepLabel" class="stepLabel"></span>
+      <button type="button" id="stepNext" title="Next side">▶</button>
     </div>
     <div id="sheetWrap">
       <div id="sheet" class="sheet preview"></div>

@@ -88,9 +88,7 @@ function currentContent() {
     title: $('title').value,
     subtitle: $('subtitle').value,
     date: $('date').value,
-    welcome: $('welcome').value,
-    items: $('items').value.split('\n').map((s) => s.trim()).filter(Boolean),
-    announcements: $('announcements').value.split('\n').map((s) => s.trim()).filter(Boolean)
+    body: $('body').value
   };
 }
 
@@ -100,7 +98,7 @@ function render() {
   $('sheetWrap').hidden = !has;
   $('sizeLabel').hidden = !has;
   $('editor').hidden = !state.tpl;
-  if (!has) { $('fitWarn').hidden = true; $('sideToggle').hidden = true; return; }
+  if (!has) { $('fitWarn').hidden = true; $('stepper').hidden = true; return; }
 
   const f = state.catalog.formats.find((x) => x.id === $('format').value);
   const c = state.catalog.colors.find((x) => x.id === $('color').value);
@@ -110,33 +108,43 @@ function render() {
 
   $('formatNote').textContent = f.note;
 
-  // Outside/Inside toggle only matters for folded formats.
-  if (state.side >= geo.sides.length) state.side = 0;
-  $('sideToggle').hidden = geo.sides.length < 2;
-  for (const b of document.querySelectorAll('#sideToggle button')) {
-    b.classList.toggle('active', Number(b.dataset.side) === state.side);
-  }
+  // Flow the text across pages and work out the printed sheets.
+  const layout = Layout.paginate(document, geo, { org, content: currentContent(), logoUrl: state.logoUrl });
+  const nSides = layout.sides.length;
+  if (state.side >= nSides) state.side = nSides - 1;
+  if (state.side < 0) state.side = 0;
+
+  // Stepper: browse every printed side. Hidden when there is only one.
+  $('stepper').hidden = nSides < 2;
+  $('stepPrev').disabled = state.side === 0;
+  $('stepNext').disabled = state.side === nSides - 1;
+  let sideName;
+  if (geo.kind === 'flat') sideName = `Page ${state.side + 1} of ${nSides}`;
+  else if (geo.kind === 'trifold') sideName = state.side === 0 ? 'Outside' : 'Inside';
+  else sideName = `Sheet ${Math.floor(state.side / 2) + 1} of ${nSides / 2} · ${state.side % 2 === 0 ? 'Outside' : 'Inside'}`;
+  $('stepLabel').textContent = sideName;
 
   const stage = document.querySelector('.stage');
-  const toggleH = geo.sides.length > 1 ? 50 : 0;
+  const toggleH = nSides > 1 ? 50 : 0;
   const scale = Math.max(10, Math.min((stage.clientWidth - 64) / f.width, (stage.clientHeight - 110 - toggleH) / f.height));
   const sheet = $('sheet');
   sheet.style.width = f.width * scale + 'px';
   sheet.style.height = f.height * scale + 'px';
   sheet.style.background = c.hex;
   sheet.style.fontSize = scale * 0.17 + 'px'; // same 0.17in-per-em ratio the PDF uses
-  sheet.style.setProperty('--primary', org.primary_color);
-  sheet.style.setProperty('--accent', org.accent_color);
-  sheet.style.setProperty('--heading-font', `"${org.heading_font}", serif`);
-  sheet.style.setProperty('--body-font', `"${org.body_font}", sans-serif`);
+  Layout.setVars(sheet, org);
   const t = w.thickness;
   sheet.style.boxShadow = `0 ${t}px ${t * 2}px rgba(0,0,0,.35), ${t}px ${t * 1.5}px 0 rgba(0,0,0,.18), 0 ${t * 6}px ${t * 14}px rgba(0,0,0,.4)`;
 
-  sheet.innerHTML = Layout.sideHtml(geo, state.side, { org, content: currentContent(), logoUrl: state.logoUrl });
-  $('fitWarn').hidden = !Layout.fitAll(sheet);
+  sheet.innerHTML = Layout.sideHtml(layout, state.side);
+  const fitOverflow = Layout.fitAll(sheet);
+  $('fitWarn').hidden = !(fitOverflow || layout.overflow);
+  $('fitWarn').textContent = geo.kind === 'trifold' && layout.overflow
+    ? "Too much text for a tri-fold. Shorten it or choose a booklet format."
+    : "Some text doesn't fit. Shorten it or choose a bigger format.";
 
-  const side = geo.sides.length > 1 ? (state.side === 0 ? ' · outside' : ' · inside') : '';
-  $('sizeLabel').textContent = `${f.width}" × ${f.height}" flat · ${c.name} · ${w.name}${side}`;
+  const nPages = layout.pages.length;
+  $('sizeLabel').textContent = `${f.width}" × ${f.height}" flat · ${nPages} page${nPages === 1 ? '' : 's'} · ${c.name} · ${w.name}`;
 }
 
 // ---------- templates ----------
@@ -148,9 +156,8 @@ function fillEditor(tpl) {
   $('title').value = tpl.content.title || '';
   $('subtitle').value = tpl.content.subtitle || '';
   $('date').value = tpl.content.date || '';
-  $('welcome').value = tpl.content.welcome || '';
-  $('items').value = (tpl.content.items || []).join('\n');
-  $('announcements').value = (tpl.content.announcements || []).join('\n');
+  $('body').value = Layout.normContent(tpl.content).body; // older templates are converted on the fly
+  state.side = 0;
   $('format').value = tpl.format_id;
   $('color').value = tpl.color_id;
   $('weight').value = tpl.weight_id;
@@ -324,11 +331,26 @@ async function init() {
   fillSelect($('weight'), state.catalog.weights);
   fillSelect($('tplNewType'), state.serviceTypes, 'id', 'label');
 
-  for (const id of ['tplName', 'title', 'subtitle', 'date', 'welcome', 'items', 'announcements', 'format', 'color', 'weight']) {
+  for (const id of ['tplName', 'title', 'subtitle', 'date', 'body', 'format', 'color', 'weight']) {
     $(id).addEventListener('input', onEdit);
   }
-  for (const b of document.querySelectorAll('#sideToggle button')) {
-    b.addEventListener('click', () => { state.side = Number(b.dataset.side); render(); });
+  $('stepPrev').onclick = () => { state.side -= 1; render(); };
+  $('stepNext').onclick = () => { state.side += 1; render(); };
+  // Insert-snippet buttons: put the sample text on its own line at the cursor.
+  for (const b of document.querySelectorAll('#snips button')) {
+    b.addEventListener('click', () => {
+      const ta = $('body');
+      const snip = b.dataset.snip;
+      const pos = ta.selectionStart;
+      const before = ta.value.slice(0, pos);
+      const after = ta.value.slice(ta.selectionEnd);
+      const lead = before === '' || before.endsWith('\n') ? '' : '\n';
+      ta.value = before + lead + snip + '\n' + after;
+      const caret = (before + lead + snip + '\n').length;
+      ta.focus();
+      ta.setSelectionRange(caret, caret);
+      onEdit();
+    });
   }
   $('exportBtn').onclick = async () => {
     if (!state.tpl) return;

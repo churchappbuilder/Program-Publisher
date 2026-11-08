@@ -19,6 +19,8 @@ accounts, no fees.
 ## Roadmap
 - [x] Local database, organizations, logos, fonts, per-organization templates
 - [x] Print-ready PDF with fold-aware page ordering (bi-fold and tri-fold)
+- [x] Flowing multi-page booklets (4, 8, 12 … pages) with correct nested-sheet page order
+- [x] Rich body markup: section headings, hymn lines, Leader/People speaker labels, stand marks, instructions, notes lines, page breaks
 - [ ] Worship traditions: liturgical (Anglican/Episcopal, Presbyterian, Lutheran, Catholic, Methodist, Orthodox) and free-form styles, each with a matching order of service
 - [ ] Responsive readings (Leader / People), seasons of the church year, lectionary readings
 - [ ] Wider scope than churches: school programs, concerts, recitals, events

@@ -1,13 +1,14 @@
 'use strict';
 
-// Runs inside a hidden window. Builds every sheet at real size, applies the
-// text-fit guardrail, then tells the main process it is ready to be saved as PDF.
+// Runs inside a hidden window. Flows the text across pages, builds every sheet at
+// real size, applies the text-fit guardrail, then tells the main process it is
+// ready to be saved as PDF.
 (async function () {
   const job = await window.api.print.getJob();
   const { format, org, content, logoUrl, fonts, mode, paperHex } = job;
   const geo = Layout.geometry(format);
-  const PX_PER_IN = 96;
 
+  // Fonts must be loaded before measuring, or pagination would differ from the preview.
   for (const f of fonts) {
     try {
       const face = new FontFace(f.name, `url(data:${f.mime};base64,${f.base64})`);
@@ -15,16 +16,18 @@
       document.fonts.add(face);
     } catch (e) { /* fall back to system font */ }
   }
+  await document.fonts.ready;
 
-  const ctx = { org, content, logoUrl };
+  const layout = Layout.paginate(document, geo, { org, content, logoUrl });
+
   const sheets = [];
   let pageW, pageH;
   if (mode === 'pages') {
     pageW = geo.pageW; pageH = geo.pageH;
-    for (let p = 0; p < geo.pages; p++) sheets.push(Layout.pageHtml(geo, p, ctx));
+    for (let p = 0; p < layout.pages.length; p++) sheets.push(Layout.pageHtml(layout, p));
   } else {
-    pageW = format.width; pageH = format.height;
-    for (let s = 0; s < geo.sides.length; s++) sheets.push(Layout.sideHtml(geo, s, ctx));
+    pageW = geo.sheetW; pageH = geo.sheetH;
+    for (let s = 0; s < layout.sides.length; s++) sheets.push(Layout.sideHtml(layout, s));
   }
 
   document.getElementById('pagecss').textContent = `@page { size: ${pageW}in ${pageH}in; margin: 0; }`;
@@ -35,14 +38,11 @@
     el.style.width = pageW + 'in';
     el.style.height = pageH + 'in';
     el.style.background = paperHex || '#ffffff';
-    el.style.fontSize = PX_PER_IN * 0.17 + 'px';
-    el.style.setProperty('--primary', org.primary_color);
-    el.style.setProperty('--accent', org.accent_color);
-    el.style.setProperty('--heading-font', `"${org.heading_font}", serif`);
-    el.style.setProperty('--body-font', `"${org.body_font}", sans-serif`);
+    el.style.fontSize = Layout.PX_PER_IN * Layout.EM_IN + 'px';
+    Layout.setVars(el, org);
   }
 
   await document.fonts.ready;
-  const overflow = Layout.fitAll(out);
-  window.api.print.ready({ overflow, sheets: sheets.length });
+  const overflow = Layout.fitAll(out) || layout.overflow;
+  window.api.print.ready({ overflow, sheets: sheets.length, pages: layout.pages.length });
 })();
