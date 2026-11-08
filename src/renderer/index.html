@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bulletin Formatter</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <h1>Bulletin Formatter</h1>
+
+    <label>Organization name
+      <input id="orgName" type="text" value="Grace Community Church">
+    </label>
+    <label>Bulletin title
+      <input id="title" type="text" value="Sunday Morning Worship">
+    </label>
+    <label>Date
+      <input id="date" type="text" value="Sunday, January 4, 2026">
+    </label>
+
+    <hr>
+    <label>Paper format
+      <select id="format"></select>
+    </label>
+    <p id="formatNote" class="hint"></p>
+    <label>Paper color
+      <select id="color"></select>
+    </label>
+    <label>Paper weight
+      <select id="weight"></select>
+    </label>
+  </aside>
+
+  <main class="stage">
+    <div id="sheetWrap">
+      <div id="sheet"></div>
+    </div>
+    <p id="sizeLabel" class="hint"></p>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

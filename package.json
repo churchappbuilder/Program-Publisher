@@ -1,0 +1,21 @@
+{
+  "name": "bulletin-formatter",
+  "version": "0.1.0",
+  "description": "Free, offline bulletin publishing tool for churches and schools.",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/churchappbuilder/Bulletin-formatter.git"
+  },
+  "license": "GPL-3.0-or-later",
+  "author": "churchappbuilder",
+  "devDependencies": {
+    "electron": "^33.0.0"
+  },
+  "allowScripts": {
+    "electron@33.4.11": true
+  }
+}
