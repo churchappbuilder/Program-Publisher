@@ -1,4 +1,4 @@
-﻿# Program Publisher
+# Program Publisher
 
 A free, open-source, offline publishing tool for churches, schools and other
 organizations. Pick a template, fill in your order of service, choose your paper,
@@ -19,7 +19,7 @@ accounts, no fees.
 ## Roadmap
 - [x] Local database, organizations, logos, fonts, per-organization templates
 - [x] Print-ready PDF with fold-aware page ordering (bi-fold and tri-fold)
-- [x] Flowing multi-page booklets (4, 8, 12 â€¦ pages) with correct nested-sheet page order
+- [x] Flowing multi-page booklets (4, 8, 12 ... pages) with correct nested-sheet page order
 - [x] Rich body markup: section headings, hymn lines, Leader/People speaker labels, stand marks, instructions, notes lines, page breaks
 - [x] Text library: built-in public-domain texts (creeds, Lord's Prayer, Ten Commandments, benedictions, ...) plus a per-church library, loose inserts, and a "Next week" button
 - [ ] Weekly fill-in sheet (spreadsheet-style entry for hymns, readings, pieces and composers, with Excel/CSV paste)
