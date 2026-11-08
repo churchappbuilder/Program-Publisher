@@ -1,0 +1,32 @@
+/* Bulletin page styling, shared by the preview and the PDF export.
+   All sizes are in em, and the sheet's font-size is set so 1em ≈ 0.17in,
+   which keeps the preview and the printout proportional. */
+
+.sheet { display: flex; font-family: var(--body-font); color: #222; overflow: hidden; }
+.panel { position: relative; flex: 1; display: flex; padding: 1.9em 1.9em 1.6em; min-width: 0; }
+.preview .panel + .panel { border-left: 1px dashed rgba(0, 0, 0, .35); }
+
+.inner { width: 100%; display: flex; flex-direction: column; overflow: hidden; overflow-wrap: anywhere; text-align: center; }
+.panel.center .inner { justify-content: center; }
+
+.logo { max-width: 60%; max-height: 3.6em; object-fit: contain; align-self: center; margin: 0 0 .5em; }
+.org, .backname { font-size: .66em; letter-spacing: .14em; text-transform: uppercase; color: var(--primary); font-weight: 600; }
+.backname { font-family: var(--heading-font); font-size: 1em; letter-spacing: .04em; text-transform: none; }
+.tagline { font-size: .58em; font-style: italic; opacity: .7; margin-top: .25em; }
+.rule { width: 35%; height: 2px; background: var(--accent); margin: .9em auto; flex-shrink: 0; }
+h2 { font-family: var(--heading-font); font-size: 1.5em; margin: 0 0 .3em; line-height: 1.15; color: var(--primary); }
+.subtitle { font-size: .8em; font-style: italic; }
+.date { font-size: .66em; opacity: .75; margin-top: .45em; }
+h3 { font-family: var(--heading-font); font-size: .95em; color: var(--primary); margin: 0 0 .5em; border-bottom: 1px solid var(--accent); padding-bottom: .25em; flex-shrink: 0; }
+.head + h3 { margin-top: 1.2em; }
+ol, ul { margin: 0 0 1em; padding: 0; list-style: none; font-size: .68em; line-height: 1.9; }
+ol li { border-bottom: 1px dotted rgba(0, 0, 0, .22); }
+ul.ann { line-height: 1.5; text-align: left; }
+ul.ann li { padding: .35em 0 .35em 1em; position: relative; }
+ul.ann li::before { content: ""; position: absolute; left: 0; top: 1em; width: .35em; height: .35em; border-radius: 50%; background: var(--accent); }
+.welcome { font-size: .7em; line-height: 1.6; margin: 0 0 1em; }
+.contact { font-size: .62em; line-height: 1.9; }
+.lines {
+  flex: 1; min-height: 6em; margin-top: .2em;
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 1.55em, rgba(0, 0, 0, .28) 1.55em, rgba(0, 0, 0, .28) calc(1.55em + 1px));
+}

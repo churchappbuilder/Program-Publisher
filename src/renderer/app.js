@@ -12,6 +12,7 @@ const state = {
   tpl: null,          // current template
   fonts: [],          // uploaded font assets for current org
   logoUrl: null,      // data URL of current org's logo
+  side: 0,            // which side of the sheet the preview shows (0 outside, 1 inside)
   dialogOrgId: null   // org being edited in the dialog (null = new)
 };
 
@@ -33,9 +34,19 @@ function fillSelect(sel, items, valueKey = 'id', labelKey = 'name') {
   }
 }
 
+// Debounce that also lets us run any pending call immediately (flush),
+// so an export never uses stale saved data.
 function debounce(fn, ms) {
-  let t;
-  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+  let t = null;
+  let pending = null;
+  const run = (...a) => { pending = a; clearTimeout(t); t = setTimeout(() => { t = null; const p = pending; pending = null; return fn(...p); }, ms); };
+  run.flush = async () => {
+    if (t === null) return;
+    clearTimeout(t); t = null;
+    const p = pending; pending = null;
+    await fn(...p);
+  };
+  return run;
 }
 
 // ---------- fonts & logo ----------
@@ -77,40 +88,10 @@ function currentContent() {
     title: $('title').value,
     subtitle: $('subtitle').value,
     date: $('date').value,
-    items: $('items').value.split('\n').map((s) => s.trim()).filter(Boolean)
+    welcome: $('welcome').value,
+    items: $('items').value.split('\n').map((s) => s.trim()).filter(Boolean),
+    announcements: $('announcements').value.split('\n').map((s) => s.trim()).filter(Boolean)
   };
-}
-
-function coverHtml(c) {
-  const o = state.org;
-  const logo = state.logoUrl ? `<img class="logo" src="${state.logoUrl}" alt="">` : '';
-  return `${logo}<div class="org">${esc(o.name)}</div>` +
-    (o.tagline ? `<div class="tagline">${esc(o.tagline)}</div>` : '') +
-    `<div class="rule"></div><h2>${esc(c.title)}</h2>` +
-    (c.subtitle ? `<div class="subtitle">${esc(c.subtitle)}</div>` : '') +
-    (c.date ? `<div class="date">${esc(c.date)}</div>` : '');
-}
-
-function orderHtml(c) {
-  return `<h3>Order of Service</h3><ol>${c.items.map((i) => `<li>${esc(i)}</li>`).join('')}</ol>`;
-}
-
-function contactHtml() {
-  const o = state.org;
-  const lines = [o.name, o.address, o.phone, o.website, o.email].filter(Boolean);
-  return `<div class="contact">${lines.map((l) => `<div>${esc(l)}</div>`).join('')}</div>`;
-}
-
-// Guardrail: shrink text inside a panel until it fits, down to a floor.
-// Returns true if it still overflows at the smallest size.
-function fitPanel(inner, panel) {
-  let scale = 1;
-  inner.style.fontSize = '1em';
-  while (inner.scrollHeight > panel.clientHeight - 2 && scale > 0.55) {
-    scale -= 0.05;
-    inner.style.fontSize = scale + 'em';
-  }
-  return inner.scrollHeight > panel.clientHeight - 2;
 }
 
 function render() {
@@ -119,24 +100,31 @@ function render() {
   $('sheetWrap').hidden = !has;
   $('sizeLabel').hidden = !has;
   $('editor').hidden = !state.tpl;
-  if (!has) { $('fitWarn').hidden = true; return; }
+  if (!has) { $('fitWarn').hidden = true; $('sideToggle').hidden = true; return; }
 
   const f = state.catalog.formats.find((x) => x.id === $('format').value);
   const c = state.catalog.colors.find((x) => x.id === $('color').value);
   const w = state.catalog.weights.find((x) => x.id === $('weight').value);
   const org = state.org;
-  const content = currentContent();
+  const geo = Layout.geometry(f);
 
   $('formatNote').textContent = f.note;
 
+  // Outside/Inside toggle only matters for folded formats.
+  if (state.side >= geo.sides.length) state.side = 0;
+  $('sideToggle').hidden = geo.sides.length < 2;
+  for (const b of document.querySelectorAll('#sideToggle button')) {
+    b.classList.toggle('active', Number(b.dataset.side) === state.side);
+  }
+
   const stage = document.querySelector('.stage');
-  const scale = Math.max(10, Math.min((stage.clientWidth - 64) / f.width, (stage.clientHeight - 110) / f.height));
+  const toggleH = geo.sides.length > 1 ? 50 : 0;
+  const scale = Math.max(10, Math.min((stage.clientWidth - 64) / f.width, (stage.clientHeight - 110 - toggleH) / f.height));
   const sheet = $('sheet');
   sheet.style.width = f.width * scale + 'px';
   sheet.style.height = f.height * scale + 'px';
   sheet.style.background = c.hex;
-  sheet.style.fontSize = scale * 0.17 + 'px';
-  sheet.style.color = '#222';
+  sheet.style.fontSize = scale * 0.17 + 'px'; // same 0.17in-per-em ratio the PDF uses
   sheet.style.setProperty('--primary', org.primary_color);
   sheet.style.setProperty('--accent', org.accent_color);
   sheet.style.setProperty('--heading-font', `"${org.heading_font}", serif`);
@@ -144,24 +132,11 @@ function render() {
   const t = w.thickness;
   sheet.style.boxShadow = `0 ${t}px ${t * 2}px rgba(0,0,0,.35), ${t}px ${t * 1.5}px 0 rgba(0,0,0,.18), 0 ${t * 6}px ${t * 14}px rgba(0,0,0,.4)`;
 
-  // Panel plan: one panel = cover + order together; multi-panel = cover | order | contact.
-  const plans = [];
-  if (f.panels === 1) {
-    plans.push(coverHtml(content) + orderHtml(content));
-  } else {
-    plans.push(coverHtml(content));
-    plans.push(orderHtml(content));
-    for (let i = 2; i < f.panels; i++) plans.push(contactHtml());
-  }
+  sheet.innerHTML = Layout.sideHtml(geo, state.side, { org, content: currentContent(), logoUrl: state.logoUrl });
+  $('fitWarn').hidden = !Layout.fitAll(sheet);
 
-  sheet.innerHTML = plans.map((html) => `<div class="panel"><div class="inner">${html}</div></div>`).join('');
-
-  let overflow = false;
-  for (const p of sheet.querySelectorAll('.panel')) {
-    if (fitPanel(p.querySelector('.inner'), p)) overflow = true;
-  }
-  $('fitWarn').hidden = !overflow;
-  $('sizeLabel').textContent = `${f.width}" × ${f.height}" flat · ${c.name} · ${w.name}`;
+  const side = geo.sides.length > 1 ? (state.side === 0 ? ' · outside' : ' · inside') : '';
+  $('sizeLabel').textContent = `${f.width}" × ${f.height}" flat · ${c.name} · ${w.name}${side}`;
 }
 
 // ---------- templates ----------
@@ -173,7 +148,9 @@ function fillEditor(tpl) {
   $('title').value = tpl.content.title || '';
   $('subtitle').value = tpl.content.subtitle || '';
   $('date').value = tpl.content.date || '';
+  $('welcome').value = tpl.content.welcome || '';
   $('items').value = (tpl.content.items || []).join('\n');
+  $('announcements').value = (tpl.content.announcements || []).join('\n');
   $('format').value = tpl.format_id;
   $('color').value = tpl.color_id;
   $('weight').value = tpl.weight_id;
@@ -347,9 +324,36 @@ async function init() {
   fillSelect($('weight'), state.catalog.weights);
   fillSelect($('tplNewType'), state.serviceTypes, 'id', 'label');
 
-  for (const id of ['tplName', 'title', 'subtitle', 'date', 'items', 'format', 'color', 'weight']) {
+  for (const id of ['tplName', 'title', 'subtitle', 'date', 'welcome', 'items', 'announcements', 'format', 'color', 'weight']) {
     $(id).addEventListener('input', onEdit);
   }
+  for (const b of document.querySelectorAll('#sideToggle button')) {
+    b.addEventListener('click', () => { state.side = Number(b.dataset.side); render(); });
+  }
+  $('exportBtn').onclick = async () => {
+    if (!state.tpl) return;
+    const msg = $('exportMsg');
+    $('exportBtn').disabled = true;
+    msg.textContent = 'Preparing PDF…';
+    try {
+      await saveTemplate.flush();
+      const r = await window.api.exportPdf(state.tpl.id, {
+        mode: $('exportMode').value,
+        includeColor: $('exportColor').checked
+      });
+      if (!r) msg.textContent = '';
+      else {
+        const f = state.catalog.formats.find((x) => x.id === state.tpl.format_id);
+        msg.textContent = `Saved ${r.sheets} PDF page${r.sheets === 1 ? '' : 's'}.` +
+          (r.foldNote ? ' Print double-sided, flipping on the short edge, then fold.' : '') +
+          (r.overflow ? ' Warning: some text was too long and may be cut off.' : '');
+      }
+    } catch (e) {
+      msg.textContent = 'Export failed: ' + e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
+    } finally {
+      $('exportBtn').disabled = false;
+    }
+  };
   $('tplSelect').addEventListener('change', () => {
     fillEditor(state.templates.find((t) => t.id === Number($('tplSelect').value)) || null);
   });

@@ -54,24 +54,15 @@ select.list option { padding: 5px 8px; border-radius: 4px; }
 .stage .warn { color: #ffb4a9; }
 .empty { color: #b9bec7; font-size: 18px; }
 
-/* ----- the paper preview ----- */
-#sheet { display: flex; transition: background .2s; font-family: var(--body-font); }
-.panel { position: relative; flex: 1; overflow: hidden; }
-.panel + .panel { border-left: 1px dashed rgba(0,0,0,.35); }
-.panel .inner { padding: 8% 8% 6%; text-align: center; }
-.panel .logo { max-width: 55%; max-height: 3.4em; object-fit: contain; display: block; margin: 0 auto .5em; }
-.panel .org { font-size: .62em; letter-spacing: .14em; text-transform: uppercase; color: var(--primary); font-weight: 600; }
-.panel .tagline { font-size: .55em; font-style: italic; opacity: .7; margin-top: .2em; }
-.panel .rule { width: 35%; height: 2px; background: var(--accent); margin: .9em auto; }
-.panel h2 { font-family: var(--heading-font); font-size: 1.45em; margin: 0 0 .3em; line-height: 1.15; color: var(--primary); }
-.panel .subtitle { font-size: .75em; font-style: italic; }
-.panel .date { font-size: .62em; opacity: .75; margin-top: .4em; }
-.panel h3 { font-family: var(--heading-font); font-size: .9em; color: var(--primary); margin: 1.2em 0 .5em; border-bottom: 1px solid var(--accent); padding-bottom: .25em; }
-.panel ol { margin: 0; padding: 0; list-style: none; font-size: .65em; line-height: 1.9; counter-reset: n; }
-.panel li { border-bottom: 1px dotted rgba(0,0,0,.2); }
-.panel .contact { font-size: .6em; line-height: 1.8; margin-top: 40%; }
-.panel .contact div:first-child { font-family: var(--heading-font); color: var(--primary); font-size: 1.2em; font-weight: 600; }
-
+/* ----- preview chrome (the page styling itself is in shared/bulletin.css) ----- */
+#sheet { transition: background .2s; }
+.toggle { display: flex; margin-bottom: 14px; border: 1px solid #6b717c; border-radius: 8px; overflow: hidden; }
+.toggle button { font: inherit; font-size: 13px; padding: 5px 18px; border: 0; background: transparent; color: #cfd3da; cursor: pointer; }
+.toggle button.active { background: #1f5fbf; color: #fff; }
+.btn.wide { width: 100%; }
+label.check { display: flex; align-items: center; gap: 8px; font-weight: 400; }
+label.check input { margin: 0; width: auto; }
+#exportMsg { margin-top: 8px; }
 /* ----- organization dialog ----- */
 dialog { border: 0; border-radius: 10px; padding: 22px 24px; width: 680px; max-width: 94vw; box-shadow: 0 10px 40px rgba(0,0,0,.4); }
 dialog::backdrop { background: rgba(0,0,0,.5); }

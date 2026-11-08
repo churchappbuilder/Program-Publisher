@@ -5,6 +5,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Bulletin Formatter</title>
+  <link rel="stylesheet" href="../shared/bulletin.css">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -36,8 +37,14 @@
       <label>Title <input id="title" type="text"></label>
       <label>Subtitle <input id="subtitle" type="text"></label>
       <label>Date <input id="date" type="text" placeholder="Sunday, January 4, 2026"></label>
+      <label>Welcome message
+        <textarea id="welcome" rows="3"></textarea>
+      </label>
       <label>Order of service (one per line)
         <textarea id="items" rows="8"></textarea>
+      </label>
+      <label>Announcements (one per line)
+        <textarea id="announcements" rows="5"></textarea>
       </label>
 
       <h3>Paper</h3>
@@ -45,13 +52,28 @@
       <p id="formatNote" class="hint"></p>
       <label>Color <select id="color"></select></label>
       <label>Weight <select id="weight"></select></label>
+
+      <h3>Export</h3>
+      <label>PDF layout
+        <select id="exportMode">
+          <option value="sheets">Print sheets (ready to fold)</option>
+          <option value="pages">Pages in reading order</option>
+        </select>
+      </label>
+      <label class="check"><input id="exportColor" type="checkbox"> Include paper color in PDF</label>
+      <button id="exportBtn" class="btn primary wide">Export PDF…</button>
+      <p id="exportMsg" class="hint"></p>
     </div>
   </aside>
 
   <main class="stage">
     <div id="empty" class="empty" hidden>Create an organization to get started.</div>
+    <div id="sideToggle" class="toggle" hidden>
+      <button type="button" data-side="0" class="active">Outside</button>
+      <button type="button" data-side="1">Inside</button>
+    </div>
     <div id="sheetWrap">
-      <div id="sheet"></div>
+      <div id="sheet" class="sheet preview"></div>
     </div>
     <p id="sizeLabel" class="hint"></p>
     <p id="fitWarn" class="warn" hidden>Some text doesn't fit. Shorten it or choose a bigger format.</p>
@@ -99,6 +121,7 @@
     </form>
   </dialog>
 
+  <script src="../shared/layout.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { FORMATS, WEIGHTS, COLORS } = require('../shared/paper');
@@ -46,7 +46,81 @@ function starterTemplates(orgId, org) {
   }
 }
 
+// ---------- PDF export ----------
+// A hidden window renders the bulletin at true size, then Chromium saves it as PDF.
+
+const printJobs = new Map(); // webContents id -> { job, resolve }
+
+async function exportPdf({ templateId, mode, includeColor, filePath }) {
+  const tpl = db.getTemplate(templateId);
+  if (!tpl) throw new Error('Template not found.');
+  const org = db.getOrg(tpl.org_id);
+  const format = FORMATS.find((f) => f.id === tpl.format_id);
+  const color = COLORS.find((c) => c.id === tpl.color_id);
+  if (!format) throw new Error('Unknown paper format.');
+
+  let logoUrl = null;
+  if (org.logo_asset_id) {
+    const d = db.getAssetData(org.logo_asset_id);
+    if (d) logoUrl = `data:${d.mime};base64,${d.base64}`;
+  }
+  const fonts = db.listAssets(org.id, 'font').map((a) => ({ name: a.name, ...db.getAssetData(a.id) }));
+
+  const job = {
+    format, org, content: tpl.content, logoUrl, fonts,
+    mode: mode === 'pages' ? 'pages' : 'sheets',
+    // Paper color is normally left out: you print on colored stock, you don't print the color.
+    paperHex: includeColor && color ? color.hex : '#ffffff'
+  };
+
+  const win = new BrowserWindow({
+    show: false, width: 1000, height: 800,
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }
+  });
+  const id = win.webContents.id;
+  let timer;
+  const ready = new Promise((resolve, reject) => {
+    printJobs.set(id, { job, resolve });
+    timer = setTimeout(() => reject(new Error('Timed out while preparing the PDF.')), 30000);
+  });
+  win.loadFile(path.join(__dirname, '..', 'renderer', 'print.html'));
+  try {
+    const info = await ready;
+    const pdf = await win.webContents.printToPDF({ printBackground: true, preferCSSPageSize: true });
+    fs.writeFileSync(filePath, pdf);
+    return { filePath, ...info, foldNote: format.panels > 1 && job.mode === 'sheets' };
+  } finally {
+    clearTimeout(timer);
+    printJobs.delete(id);
+    win.destroy();
+  }
+}
+
 function registerIpc() {
+  ipcMain.handle('print:getJob', (e) => {
+    const p = printJobs.get(e.sender.id);
+    return p ? p.job : null;
+  });
+  ipcMain.handle('print:ready', (e, info) => {
+    const p = printJobs.get(e.sender.id);
+    if (p) p.resolve(info);
+  });
+  ipcMain.handle('export:pdf', async (e, templateId, opts) => {
+    const tpl = db.getTemplate(templateId);
+    if (!tpl) throw new Error('Template not found.');
+    const win = BrowserWindow.fromWebContents(e.sender);
+    const safe = tpl.name.replace(/[\\/:*?"<>|]+/g, '-');
+    const res = await dialog.showSaveDialog(win, {
+      title: 'Save bulletin as PDF',
+      defaultPath: path.join(app.getPath('documents'), `${safe}.pdf`),
+      filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    });
+    if (res.canceled || !res.filePath) return null;
+    const result = await exportPdf({ templateId, ...opts, filePath: res.filePath });
+    shell.showItemInFolder(result.filePath);
+    return result;
+  });
+
   ipcMain.handle('paper:catalog', () => ({ formats: FORMATS, weights: WEIGHTS, colors: COLORS }));
   ipcMain.handle('presets:serviceTypes', () => SERVICE_TYPES);
 
@@ -114,3 +188,5 @@ app.on('window-all-closed', () => {
   if (db) db.close();
   if (process.platform !== 'darwin') app.quit();
 });
+
+module.exports = { exportPdf };

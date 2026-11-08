@@ -16,6 +16,16 @@ accounts, no fees.
 - Print-ready PDF with booklet page ordering for folded formats
 - Local SQLite database for your fonts, logos and settings
 
+## Roadmap
+- [x] Local database, organizations, logos, fonts, per-organization templates
+- [x] Print-ready PDF with fold-aware page ordering (bi-fold and tri-fold)
+- [ ] Worship traditions: liturgical (Anglican/Episcopal, Presbyterian, Lutheran, Catholic, Methodist, Orthodox) and free-form styles, each with a matching order of service
+- [ ] Responsive readings (Leader / People), seasons of the church year, lectionary readings
+- [ ] Wider scope than churches: school programs, concerts, recitals, events
+- [ ] App icon and Windows installer built automatically on GitHub
+- [ ] Bleed and crop marks for print shops
+- [ ] macOS version
+
 ## Run from source
 Requires [Node.js](https://nodejs.org) (LTS).
 
