@@ -1,4 +1,4 @@
-# Bulletin Formatter
+# Program Publisher
 
 A free, open-source, offline publishing tool for churches, schools and other
 organizations. Pick a template, fill in your order of service, choose your paper,

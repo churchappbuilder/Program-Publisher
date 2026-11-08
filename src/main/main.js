@@ -19,7 +19,7 @@ function createWindow() {
     height: 820,
     minWidth: 980,
     minHeight: 640,
-    title: 'Bulletin Formatter',
+    title: 'Program Publisher',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -175,7 +175,7 @@ function registerIpc() {
 }
 
 app.whenReady().then(() => {
-  const dbFile = process.env.BF_DB || path.join(app.getPath('userData'), 'bulletin-formatter.db');
+  const dbFile = process.env.BF_DB || path.join(app.getPath('userData'), 'program-publisher.db');
   db = open(dbFile);
   registerIpc();
   createWindow();

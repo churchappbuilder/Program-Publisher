@@ -1,7 +1,8 @@
 {
-  "name": "bulletin-formatter",
+  "name": "program-publisher",
+  "productName": "Program Publisher",
   "version": "0.1.0",
-  "description": "Free, offline bulletin publishing tool for churches and schools.",
+  "description": "Free, offline tool for designing and printing programs and bulletins for churches, schools and events.",
   "main": "src/main/main.js",
   "scripts": {
     "start": "electron .",
@@ -9,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/churchappbuilder/Bulletin-formatter.git"
+    "url": "git+https://github.com/churchappbuilder/Program-Publisher.git"
   },
   "license": "GPL-3.0-or-later",
   "author": "churchappbuilder",
@@ -17,6 +18,6 @@
     "electron": "^45.2.3"
   },
   "allowScripts": {
-    "electron@33.4.11": true
+    "electron@45.2.3": true
   }
 }
