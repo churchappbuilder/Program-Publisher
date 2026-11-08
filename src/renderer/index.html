@@ -42,7 +42,8 @@
       <label class="coverField">Title <input id="title" type="text"></label>
       <label class="coverField">Subtitle <input id="subtitle" type="text"></label>
       <label class="coverField">Date <input id="date" type="text" placeholder="Sunday, January 4, 2026"></label>
-      <label for="body">Body: the service, readings, announcements</label>
+      <button type="button" id="sheetOpen" class="btn primary wide" title="Fill in hymns, readings and pieces in a spreadsheet-style grid, or paste from Excel">Weekly fill-in sheet…</button>
+      <label for="body" class="bodyLabel">Body: the service, readings, announcements</label>
       <div class="row textRow">
         <select id="textSelect" class="grow" title="Texts to insert"></select>
         <button type="button" id="textInsert" class="btn">Insert</button>
@@ -119,6 +120,28 @@ Plain lines make a paragraph; line breaks are kept.</pre>
     <p id="fitWarn" class="warn" hidden>Some text doesn't fit. Shorten it or choose a bigger format.</p>
   </main>
 
+  <dialog id="sheetDialog">
+    <div class="sheetBox">
+      <h2>Weekly fill-in sheet</h2>
+      <p class="hint">Type each week's hymn numbers, readings and names into the grid, or copy cells in Excel and paste them here. The bulletin updates as you type. Prayers and other text stay as they are.</p>
+      <div class="grid3">
+        <label>Date <input id="sh_date" type="text"></label>
+        <label>Title <input id="sh_title" type="text"></label>
+        <label>Columns
+          <select id="sh_mode"></select>
+        </label>
+      </div>
+      <div class="sheetScroll"><table id="sh_table"></table></div>
+      <div class="row end">
+        <button type="button" id="sh_addItem" class="btn">Add item</button>
+        <button type="button" id="sh_addHead" class="btn">Add section</button>
+        <button type="button" id="sh_copy" class="btn" title="Copy the rows as a table you can paste into Excel">Copy as table</button>
+        <span id="sh_msg" class="hint grow"></span>
+        <button type="button" id="sh_close" class="btn primary">Done</button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog id="textDialog">
     <form method="dialog" id="textForm">
       <h2>Text library</h2>
@@ -190,6 +213,7 @@ Plain lines make a paragraph; line breaks are kept.</pre>
   </dialog>
 
   <script src="../shared/layout.js"></script>
+  <script src="../shared/sheet.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

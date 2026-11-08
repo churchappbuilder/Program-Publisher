@@ -44,7 +44,7 @@ function starterTemplates(orgId, org) {
       format_id: org.default_format_id,
       color_id: org.default_color_id,
       weight_id: org.default_weight_id,
-      content: { title: s.title, subtitle: s.subtitle, date: '', body: s.body }
+      content: { title: s.title, subtitle: s.subtitle, date: '', body: s.body, sheetMode: s.sheetMode || 'service' }
     });
   }
 }
@@ -166,7 +166,7 @@ function registerIpc() {
       format_id: org.default_format_id,
       color_id: org.default_color_id,
       weight_id: org.default_weight_id,
-      content: { title: s.title, subtitle: s.subtitle, date: '', body: s.body }
+      content: { title: s.title, subtitle: s.subtitle, date: '', body: s.body, sheetMode: s.sheetMode || 'service' }
     });
   });
   ipcMain.handle('templates:update', (_e, id, data) => db.updateTemplate(id, data));

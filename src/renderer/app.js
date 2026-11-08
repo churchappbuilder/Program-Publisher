@@ -92,7 +92,8 @@ function currentContent() {
     subtitle: $('subtitle').value,
     date: $('date').value,
     body: $('body').value,
-    plain: !!(state.tpl && state.tpl.content && state.tpl.content.plain) // inserts have no cover header
+    plain: !!(state.tpl && state.tpl.content && state.tpl.content.plain), // inserts have no cover header
+    sheetMode: (state.tpl && state.tpl.content && state.tpl.content.sheetMode) || 'service'
   };
 }
 
@@ -287,6 +288,138 @@ async function openTextLibrary() {
   await tlRefresh();
   if (sel.trim()) $('tl_body').value = sel.trim(); // start a new text from the highlighted lines
   $('textDialog').showModal();
+}
+
+// ---------- weekly fill-in sheet ----------
+// A spreadsheet-style view of the same body text. Edits write straight back to the body box.
+
+const sh = { rows: [], mode: 'service' };
+
+function sheetSync() {
+  $('body').value = Sheet.buildBody(sh.rows);
+  onEdit();
+}
+
+function sheetMsg(msg) { $('sh_msg').textContent = msg || ''; }
+
+function renderSheet() {
+  const m = Sheet.MODES[sh.mode];
+  const span = m.columns.length + (m.stand ? 1 : 0);
+  const e = Layout.esc;
+  let html = '<thead><tr>' + (m.stand ? '<th class="c-stand" title="Standing">▲</th>' : '') +
+    m.columns.map((c) => `<th>${e(c)}</th>`).join('') + '<th></th></tr></thead><tbody>';
+  sh.rows.forEach((r, i) => {
+    const btn = (act, label, title, cls) => `<button type="button" data-act="${act}" data-i="${i}" title="${title}"${cls ? ` class="${cls}"` : ''}>${label}</button>`;
+    const ctl = `<td class="ctl">${btn('up', '↑', 'Move up')}${btn('down', '↓', 'Move down')}${btn('add', '+', 'Add an item below')}${btn('del', '✕', 'Remove this row', 'danger')}</td>`;
+    if (r.type === 'heading') {
+      html += `<tr class="h"><td colspan="${span}"><input type="text" data-i="${i}" data-kind="head" value="${e(r.text)}" placeholder="Section heading"></td>${ctl}</tr>`;
+    } else if (r.type === 'item') {
+      html += '<tr>' + (m.stand ? `<td class="stand"><input type="checkbox" data-i="${i}" data-kind="stand"${r.stand ? ' checked' : ''} title="Standing"></td>` : '') +
+        Sheet.cells(r, sh.mode).map((v, c) => `<td><input type="text" data-i="${i}" data-c="${c}" value="${e(v)}"></td>`).join('') + ctl + '</tr>';
+    } else {
+      const first = (r.lines.find((l) => l.trim()) || '').trim().slice(0, 90);
+      html += `<tr class="o"><td colspan="${span}">Text block (${r.lines.filter((l) => l.trim()).length} lines, not edited here): ${e(first)}</td>${ctl}</tr>`;
+    }
+  });
+  $('sh_table').innerHTML = html + '</tbody>';
+}
+
+function openSheet() {
+  if (!state.tpl) return;
+  sh.rows = Sheet.parseRows($('body').value);
+  sh.mode = (state.tpl.content && state.tpl.content.sheetMode) || 'service';
+  fillSelect($('sh_mode'), Object.entries(Sheet.MODES).map(([id, m]) => ({ id, name: m.name })));
+  $('sh_mode').value = sh.mode;
+  $('sh_date').value = $('date').value;
+  $('sh_title').value = $('title').value;
+  sheetMsg('');
+  renderSheet();
+  $('sheetDialog').showModal();
+}
+
+function wireSheet() {
+  $('sheetOpen').onclick = openSheet;
+  $('sh_close').onclick = () => $('sheetDialog').close();
+  $('sh_date').addEventListener('input', () => { $('date').value = $('sh_date').value; onEdit(); });
+  $('sh_title').addEventListener('input', () => { $('title').value = $('sh_title').value; onEdit(); });
+  $('sh_mode').addEventListener('change', () => {
+    sh.mode = $('sh_mode').value;
+    state.tpl.content.sheetMode = sh.mode;
+    renderSheet();
+    onEdit();
+  });
+
+  const table = $('sh_table');
+  table.addEventListener('input', (ev) => {
+    const t = ev.target;
+    if (t.dataset.i === undefined) return;
+    const row = sh.rows[Number(t.dataset.i)];
+    if (t.dataset.kind === 'head') row.text = t.value;
+    else if (t.dataset.c !== undefined) Sheet.setCell(row, Number(t.dataset.c), t.value, sh.mode);
+    else return;
+    sheetSync();
+  });
+  table.addEventListener('change', (ev) => {
+    const t = ev.target;
+    if (t.dataset.kind !== 'stand') return;
+    sh.rows[Number(t.dataset.i)].stand = t.checked;
+    sheetSync();
+  });
+  table.addEventListener('click', (ev) => {
+    const b = ev.target.closest('button[data-act]');
+    if (!b) return;
+    const i = Number(b.dataset.i);
+    const act = b.dataset.act;
+    if (act === 'up' && i > 0) [sh.rows[i - 1], sh.rows[i]] = [sh.rows[i], sh.rows[i - 1]];
+    else if (act === 'down' && i < sh.rows.length - 1) [sh.rows[i + 1], sh.rows[i]] = [sh.rows[i], sh.rows[i + 1]];
+    else if (act === 'add') sh.rows.splice(i + 1, 0, Sheet.newItem());
+    else if (act === 'del') {
+      const r = sh.rows[i];
+      if (r.type === 'other' && !confirm('Remove this block of text from the bulletin?')) return;
+      sh.rows.splice(i, 1);
+    } else return;
+    renderSheet();
+    sheetSync();
+  });
+  // Pasting a block of cells copied from Excel or Google Sheets fills the grid.
+  table.addEventListener('paste', (ev) => {
+    const t = ev.target;
+    if (t.dataset.c === undefined) return;
+    const text = ev.clipboardData.getData('text/plain');
+    const out = Sheet.applyPaste(sh.rows, Number(t.dataset.i), Number(t.dataset.c), text, sh.mode);
+    if (!out) return; // a single value: normal paste
+    ev.preventDefault();
+    const added = out.length - sh.rows.length;
+    sh.rows = out;
+    renderSheet();
+    sheetSync();
+    const n = text.replace(/\r/g, '').replace(/\n+$/, '').split('\n').length;
+    sheetMsg(`Pasted ${n} row${n === 1 ? '' : 's'}${added > 0 ? `, added ${added} new` : ''}.`);
+  });
+
+  $('sh_addItem').onclick = () => {
+    sh.rows.push(Sheet.newItem());
+    renderSheet();
+    sheetSync();
+    const inputs = $('sh_table').querySelectorAll('input[type=text][data-c="0"]');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+    $('sh_table').parentElement.scrollTop = 1e6;
+  };
+  $('sh_addHead').onclick = () => {
+    sh.rows.push({ type: 'heading', level: 1, text: 'New section' });
+    renderSheet();
+    sheetSync();
+    $('sh_table').parentElement.scrollTop = 1e6;
+  };
+  $('sh_copy').onclick = async () => {
+    const text = Sheet.toTable(sh.rows, sh.mode);
+    try {
+      await navigator.clipboard.writeText(text);
+      sheetMsg(`Copied ${text ? text.split('\n').length : 0} rows. Paste them into Excel, edit, and paste back.`);
+    } catch (e) {
+      sheetMsg('Could not copy to the clipboard.');
+    }
+  };
 }
 
 // ---------- organizations ----------
@@ -499,6 +632,8 @@ async function init() {
     await window.api.texts.delete(t.id);
     await tlRefresh();
   };
+
+  wireSheet();
 
   // Weekly workflow
   $('tplNext').onclick = async () => {

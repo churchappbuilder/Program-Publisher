@@ -96,11 +96,11 @@ Officiant | | Name`
   },
   {
     id: 'school', label: 'School / concert program', name: 'Concert Program',
-    title: 'Spring Concert', subtitle: '',
+    title: 'Spring Concert', subtitle: '', sheetMode: 'concert',
     body: `# Program
-Piece Title | | Composer
-Piece Title | | Composer
-Piece Title | | Composer
+Piece Title | | Composer Name (1732–1809)
+Piece Title | arr. Arranger | Composer Name (b. 1978)
+Piece Title | | Traditional
 
 # Thank You
 Thank you for joining us.`

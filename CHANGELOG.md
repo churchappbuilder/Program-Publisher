@@ -4,6 +4,12 @@ All notable changes to Program Publisher. Versions follow [Semantic Versioning](
 while the app is below 1.0, new features bump the middle number (0.2.0 → 0.3.0) and fixes bump the last (0.2.0 → 0.2.1).
 The version shows in the app under the title and in the installer file name.
 
+## 0.3.0 — 2026-11-08
+### Added
+- Weekly fill-in sheet: a spreadsheet-style grid for each week's hymn numbers, readings, preacher and standing marks (▲). It edits the same text as the body box, so prayers and other text stay untouched. Paste a block of cells straight from Excel or Google Sheets, or copy the rows out as a table.
+- Concert program mode for the sheet: Piece, Note (arranger or work), Composer and Years (for example Haydn (1732–1809)).
+- School / concert program starter now uses composer and dates.
+
 ## 0.2.0 — 2026-11-08
 ### Added
 - Flowing multi-page booklets (4, 8, 12 … pages) with correct nested-sheet page order for folding and stapling.

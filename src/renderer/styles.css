@@ -97,3 +97,24 @@ input.num { width: 64px; flex: none; margin-top: 0; }
 #catNote { margin: 0 0 10px; }
 .sidebar h1 { margin-bottom: 2px; }
 p.ver { margin: 0 0 14px; }
+
+/* ----- weekly fill-in sheet ----- */
+#sheetDialog { width: 1040px; max-width: 96vw; }
+.grid3 { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 0 14px; }
+.sheetScroll { max-height: 56vh; overflow: auto; border: 1px solid #d3d7de; border-radius: 8px; margin: 4px 0 12px; }
+#sh_table { border-collapse: collapse; width: 100%; font-size: 13px; }
+#sh_table th { position: sticky; top: 0; z-index: 1; background: #eef0f3; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #5b616c; padding: 7px 8px; border-bottom: 1px solid #d3d7de; }
+#sh_table td { padding: 0; border-bottom: 1px solid #eceef2; }
+#sh_table td input[type=text] { width: 100%; margin: 0; border: 1px solid transparent; border-radius: 0; padding: 7px 8px; background: transparent; font-size: 13px; }
+#sh_table td input[type=text]:hover { background: #f6f8fc; }
+#sh_table td input[type=text]:focus { outline: none; border-color: #1f5fbf; background: #fff; }
+#sh_table tr.h td { background: #e8eef8; }
+#sh_table tr.h input { font-weight: 700; }
+#sh_table tr.o td { background: #fafafa; color: #6b717c; font-size: 12px; font-style: italic; padding: 6px 10px; }
+#sh_table .c-stand { width: 34px; text-align: center; }
+#sh_table td.stand { text-align: center; }
+#sh_table td.ctl { white-space: nowrap; text-align: right; padding-right: 6px; width: 1%; }
+#sh_table td.ctl button { font: inherit; font-size: 12px; width: 24px; height: 24px; border: 1px solid #c4c8cf; border-radius: 5px; background: #fff; cursor: pointer; margin-left: 2px; }
+#sh_table td.ctl button:hover { background: #eef0f3; }
+#sh_table td.ctl button.danger { color: #b3261e; }
+.bodyLabel { margin-top: 10px; }

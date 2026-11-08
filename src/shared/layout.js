@@ -137,6 +137,49 @@
   const BOLD_ROLES = new Set(['people', 'all', 'congregation']);
   const ROLE_RE = new RegExp('^(' + ROLES.join('|') + ')\\s*:\\s*(.*)$', 'i');
 
+  // What kind of line is this? Mirrors the rules parseBody applies, so other
+  // modules (the weekly fill-in sheet) classify lines exactly the same way.
+  function classifyLine(raw) {
+    const t = String(raw == null ? '' : raw).trim();
+    if (!t) return 'blank';
+    if (/^={3,}$/.test(t)) return 'break';
+    if (/^##\s+/.test(t)) return 'sub';
+    if (/^#\s+/.test(t)) return 'sec';
+    if (/^>\s?/.test(t)) return 'rubric';
+    if (/^\[notes(?:\s+\d+)?\]$/i.test(t)) return 'notes';
+    if (/^\^\s?/.test(t)) return 'center';
+    if (/^[-•]\s+/.test(t)) return 'bullet';
+    const body = t.replace(/^\+\s+/, '');
+    if (ROLE_RE.test(body)) return 'role';
+    if (body.includes('|')) return 'item';
+    return 'text';
+  }
+
+  // "+ Label | Middle | Right" -> { stand, label, mid, right }; null if not an item line.
+  function parseItemLine(raw) {
+    if (classifyLine(raw) !== 'item') return null;
+    let body = String(raw).trim();
+    const stand = /^\+\s+/.test(body);
+    body = body.replace(/^\+\s+/, '');
+    const parts = body.split('|').map((s) => s.trim());
+    return {
+      stand,
+      label: parts[0],
+      mid: parts.length >= 3 ? parts[1] : '',
+      right: parts.length >= 3 ? parts.slice(2).join(' | ') : parts[1] || ''
+    };
+  }
+
+  function formatItemLine(it) {
+    const pre = it.stand ? '+ ' : '';
+    const label = String(it.label || '').trim();
+    const mid = String(it.mid || '').trim();
+    const right = String(it.right || '').trim();
+    if (mid) return `${pre}${label} | ${mid} | ${right}`.trimEnd();
+    if (right) return `${pre}${label} | ${right}`;
+    return `${pre}${label} |`;
+  }
+
   function parseBody(text) {
     const src = String(text || '').replace(/\r/g, '').split('\n');
     const blocks = [];
@@ -356,5 +399,5 @@
     return overflow;
   }
 
-  return { PX_PER_IN, EM_IN, geometry, impose, normContent, clearWeekly, insertFormatId, parseBody, paginate, sideHtml, pageHtml, fitAll, setVars, esc };
+  return { PX_PER_IN, EM_IN, geometry, impose, normContent, clearWeekly, insertFormatId, classifyLine, parseItemLine, formatItemLine, parseBody, paginate, sideHtml, pageHtml, fitAll, setVars, esc };
 });

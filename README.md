@@ -23,7 +23,7 @@ accounts, no fees.
 - [x] Rich body markup: section headings, hymn lines, Leader/People speaker labels, stand marks, instructions, notes lines, page breaks
 - [x] Text library: built-in public-domain texts (creeds, Lord's Prayer, Ten Commandments, benedictions, ...) plus a per-church library, loose inserts, and a "Next week" button
 - [x] Catechism picker (Westminster Shorter and Larger, Heidelberg, Baptist 1693) by question number or range
-- [ ] Weekly fill-in sheet (spreadsheet-style entry for hymns, readings, pieces and composers, with Excel/CSV paste)
+- [x] Weekly fill-in sheet: spreadsheet-style entry for hymns, readings, pieces and composers, with paste from Excel
 - [ ] Worship traditions: liturgical (Anglican/Episcopal, Presbyterian, Lutheran, Catholic, Methodist, Orthodox) and free-form styles, each with a matching order of service
 - [ ] Responsive readings (Leader / People), seasons of the church year, lectionary readings
 - [ ] Wider scope than churches: school programs, concerts, recitals, events
