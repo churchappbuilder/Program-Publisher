@@ -1,0 +1,101 @@
+[
+  {
+    "id": "presbyterian",
+    "group": "Church",
+    "label": "Presbyterian worship",
+    "blurb": "Formal order of worship with hymns, the creed and the Lord’s Prayer.",
+    "org": "Covenant Presbyterian Church",
+    "second": false,
+    "pages": 4
+  },
+  {
+    "id": "anglican",
+    "group": "Church",
+    "label": "Anglican Holy Eucharist",
+    "blurb": "Full liturgy with Celebrant and People parts, in bold where the congregation speaks.",
+    "org": "St. Aidan’s Anglican Church",
+    "second": true,
+    "pages": 8
+  },
+  {
+    "id": "lutheran",
+    "group": "Church",
+    "label": "Lutheran Holy Communion",
+    "blurb": "Gathering, Word, Meal and Sending, with the hymnal numbers Lutherans use.",
+    "org": "Redeemer Lutheran Church",
+    "second": false,
+    "pages": 4
+  },
+  {
+    "id": "methodist",
+    "group": "Church",
+    "label": "Methodist Sunday worship",
+    "blurb": "A responsive call to worship, the Doxology and a prayer of dedication.",
+    "org": "Wesley Chapel United Methodist Church",
+    "second": false,
+    "pages": 4
+  },
+  {
+    "id": "christmas",
+    "group": "Church",
+    "label": "Christmas Eve",
+    "blurb": "Lessons and carols with seasonal art on the cover, printed on cream paper.",
+    "org": "Grace Community Church",
+    "second": false,
+    "pages": 4
+  },
+  {
+    "id": "funeral",
+    "group": "Church",
+    "label": "Funeral service",
+    "blurb": "A quiet, framed cover and a complete order of service for a memorial.",
+    "org": "Grace Community Church",
+    "second": false,
+    "pages": 4
+  },
+  {
+    "id": "wedding",
+    "group": "Church",
+    "label": "Wedding ceremony",
+    "blurb": "A framed cover and the order of the ceremony with the wedding party.",
+    "org": "Grace Community Church",
+    "second": false,
+    "pages": 4
+  },
+  {
+    "id": "graduation",
+    "group": "School",
+    "label": "College commencement",
+    "blurb": "Baccalaureate and commencement orders, then degree candidates by college with hometowns.",
+    "org": "Heritage University",
+    "second": false,
+    "pages": 4
+  },
+  {
+    "id": "orchestra",
+    "group": "School",
+    "label": "Orchestra concert",
+    "blurb": "Composers and dates stacked beside each piece, with the orchestra listed by section.",
+    "org": "Heritage University",
+    "second": false,
+    "pages": 4
+  },
+  {
+    "id": "recital",
+    "group": "School",
+    "label": "Senior recital",
+    "blurb": "Works with sources and movements, Roman-numeral groups and program notes.",
+    "org": "Heritage University",
+    "second": false,
+    "pages": 4
+  },
+  {
+    "id": "play",
+    "group": "School",
+    "label": "School play",
+    "blurb": "Cast, scenes and crew for a school production, with a note from the director.",
+    "org": "Cornerstone Christian Academy",
+    "second": false,
+    "pages": 4
+  }
+]

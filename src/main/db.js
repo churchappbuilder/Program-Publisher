@@ -71,6 +71,10 @@ const MIGRATIONS = [
   // v3: what kind of organization this is (church, school, other), so the app can show the right tools
   `
   ALTER TABLE organizations ADD COLUMN kind TEXT NOT NULL DEFAULT 'church';
+  `,
+  // v4: what kind of logo an uploaded logo is (shield, banner, seal…), so a cover can use the right one
+  `
+  ALTER TABLE assets ADD COLUMN role TEXT NOT NULL DEFAULT '';
   `
 ];
 
@@ -148,16 +152,26 @@ function open(file) {
 
     // ---- assets (logos, fonts, images) ----
     listAssets(orgId, kind) {
-      const sql = 'SELECT id, org_id, kind, name, mime, length(data) AS size FROM assets WHERE org_id = ?' +
+      const sql = 'SELECT id, org_id, kind, name, role, mime, length(data) AS size FROM assets WHERE org_id = ?' +
         (kind ? ' AND kind = ?' : '') + ' ORDER BY name COLLATE NOCASE';
       return db.prepare(sql).all(...(kind ? [orgId, kind] : [orgId])).map(plain);
     },
-    addAsset({ orgId, kind, name, mime, data }) {
+    addAsset({ orgId, kind, name, mime, data, role }) {
       const r = db
-        .prepare('INSERT INTO assets (org_id, kind, name, mime, data) VALUES (?,?,?,?,?)')
-        .run(orgId, kind, name, mime, data);
+        .prepare('INSERT INTO assets (org_id, kind, name, role, mime, data) VALUES (?,?,?,?,?,?)')
+        .run(orgId, kind, name, role || '', mime, data);
       const id = Number(r.lastInsertRowid);
       return api.listAssets(orgId).find((a) => a.id === id);
+    },
+    // Rename an uploaded logo or say what kind it is (shield, banner, seal...).
+    updateAsset(id, data) {
+      const row = db.prepare('SELECT org_id FROM assets WHERE id = ?').get(id);
+      if (!row) throw new Error('Picture not found.');
+      const name = String(data.name == null ? '' : data.name).trim();
+      if ('name' in data && !name) throw new Error('A logo needs a name.');
+      if ('name' in data) db.prepare('UPDATE assets SET name = ? WHERE id = ?').run(name, id);
+      if ('role' in data) db.prepare('UPDATE assets SET role = ? WHERE id = ?').run(String(data.role || ''), id);
+      return api.listAssets(row.org_id).find((a) => a.id === id);
     },
     getAssetData(id) {
       const row = db.prepare('SELECT mime, data FROM assets WHERE id = ?').get(id);

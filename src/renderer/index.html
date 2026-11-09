@@ -92,6 +92,7 @@
 
       <h3 id="step2Title">2. This week's service</h3>
       <button type="button" id="sheetOpen" class="btn primary wide" title="Type each week's hymn numbers, readings and names, or paste them from Excel">Fill in the order of service…</button>
+      <button type="button" id="namesOpen" class="btn wide" title="Paste a list of graduates, performers or donors and print it in columns">Add a list of names…</button>
       <p class="hint" id="sheetHint">Type the hymn numbers, readings and names. You can also paste them from Excel.</p>
 
       <div id="churchSlot">
@@ -200,7 +201,8 @@ Plain lines make a paragraph; line breaks are kept.</pre>
             <button type="button" data-e="name">The name</button>
             <button type="button" data-e="title">The title</button>
           </div>
-          <h3>Logo size</h3>
+          <h3>Logo</h3>
+          <label>Which logo<select id="cv_logoSel"></select></label>
           <div class="seg" id="cv_logoSize">
             <button type="button" data-s="small">Small</button>
             <button type="button" data-s="medium">Medium</button>
@@ -230,6 +232,7 @@ Plain lines make a paragraph; line breaks are kept.</pre>
             <label class="check"><input id="cv_tagline" type="checkbox"> Tagline</label>
             <label class="check"><input id="cv_date" type="checkbox"> Date</label>
             <label class="check"><input id="cv_address" type="checkbox"> Address and contact</label>
+            <label class="check"><input id="cv_water" type="checkbox"> Logo faintly behind the text</label>
           </div>
           <label>Verse or quote (optional)<textarea id="cv_quote" rows="2" placeholder="Oh come, let us worship and bow down. Psalm 95:6"></textarea></label>
           <label>Extra text at the bottom (optional)<textarea id="cv_footer" rows="2" placeholder="Worship at 8:30 and 11:00 am"></textarea></label>
@@ -240,6 +243,19 @@ Plain lines make a paragraph; line breaks are kept.</pre>
         </div>
       </div>
       <div class="row end"><span class="grow"></span><button type="button" id="cv_done" class="btn primary">Done</button></div>
+    </div>
+  </dialog>
+  <dialog id="namesDialog">
+    <div class="namesBox">
+      <h2>Add a list of names</h2>
+      <p class="hint">For graduates, performers, a roster, or donors. Paste the names from Excel or Word, one per line. Add a hometown or honors after a tab or a | on the same line.</p>
+      <label>Heading (optional)<input id="nm_heading" type="text" placeholder="The Graduates"></label>
+      <label>Columns
+        <select id="nm_cols"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select>
+      </label>
+      <label>Names<textarea id="nm_text" rows="12" placeholder="Jack Aaron Bovay | Peoria, IL&#10;Anna Grace Morken | Dallas, TX&#10;Natalie Elisabeth Zwolanek"></textarea></label>
+      <p id="nm_msg" class="hint"></p>
+      <div class="row end"><span class="grow"></span><button type="button" id="nm_cancel" class="btn">Cancel</button><button type="button" id="nm_add" class="btn primary">Add to the program</button></div>
     </div>
   </dialog>
   <dialog id="sheetDialog">
@@ -317,13 +333,13 @@ Plain lines make a paragraph; line breaks are kept.</pre>
         <label>Default paper color <select id="o_color"></select></label>
       </div>
 
+      <div class="logosBlock">
+        <h3>Logos</h3>
+        <p class="hint">Add every version of your logo that you use, such as a shield, a banner or a seal. Choose the main one. Any cover can use a different one.</p>
+        <div id="logoList" class="logoList"></div>
+        <button type="button" id="logoAdd" class="btn">Add a logo…</button>
+      </div>
       <div class="assets">
-        <div>
-          <h3>Logo</h3>
-          <div id="logoPreview" class="logoBox">No logo</div>
-          <button type="button" id="logoPick" class="btn">Choose logo…</button>
-          <button type="button" id="logoClear" class="btn">Remove</button>
-        </div>
         <div>
           <h3>Fonts</h3>
           <ul id="fontList" class="fontList"></ul>

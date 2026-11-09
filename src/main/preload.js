@@ -17,7 +17,8 @@ contextBridge.exposeInMainWorld('api', {
     list: call('assets:list'),
     data: call('assets:data'),
     pick: call('assets:pick'),
-    delete: call('assets:delete')
+    delete: call('assets:delete'),
+    update: call('assets:update')
   },
   templates: {
     list: call('templates:list'),

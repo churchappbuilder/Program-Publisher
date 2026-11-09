@@ -113,3 +113,25 @@ test('organization kind: defaults to church, can be school, survives update', ()
   db.close();
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test('logos: several per organization, each with a type; rename and retype; the main logo is cleared if removed', () => {
+  const { db, dir } = tempDb();
+  const org = db.createOrg({ name: 'School' });
+  const shield = db.addAsset({ orgId: org.id, kind: 'logo', name: 'shield.png', role: 'shield', mime: 'image/png', data: Buffer.from([1]) });
+  const banner = db.addAsset({ orgId: org.id, kind: 'logo', name: 'banner.png', mime: 'image/png', data: Buffer.from([2]) });
+  assert.strictEqual(shield.role, 'shield');
+  assert.strictEqual(banner.role, '');
+  assert.strictEqual(db.listAssets(org.id, 'logo').length, 2);
+  const re = db.updateAsset(banner.id, { name: 'Wide banner', role: 'banner' });
+  assert.strictEqual(re.name, 'Wide banner');
+  assert.strictEqual(re.role, 'banner');
+  assert.strictEqual(db.updateAsset(banner.id, { role: 'seal' }).name, 'Wide banner'); // only the role changed
+  assert.throws(() => db.updateAsset(banner.id, { name: '  ' }));
+  assert.throws(() => db.updateAsset(9999, { name: 'x' }));
+  db.updateOrg(org.id, { logo_asset_id: shield.id });
+  db.deleteAsset(shield.id);
+  assert.strictEqual(db.getOrg(org.id).logo_asset_id, null);
+  assert.strictEqual(db.listAssets(org.id, 'logo').length, 1);
+  db.close();
+  fs.rmSync(dir, { recursive: true, force: true });
+});

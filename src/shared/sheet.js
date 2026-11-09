@@ -19,7 +19,7 @@
     },
     program: {
       name: 'School program (graduation, play, awards)',
-      columns: ['Item', 'Detail', 'Name or details'],
+      columns: ['Item', 'Detail', 'Name or details', 'Title (small, under the name)'],
       stand: false
     },
     concert: {
@@ -47,6 +47,7 @@
     const lines = String(body || '').replace(/\r/g, '').split('\n');
     const rows = [];
     let run = [];
+    let inCols = false;
     const flush = () => {
       while (run.length && !run[0].trim()) run.shift();
       while (run.length && !run[run.length - 1].trim()) run.pop();
@@ -55,6 +56,15 @@
     };
     for (const line of lines) {
       const kind = Layout.classifyLine(line);
+      // A [columns] block (a roster or list of names) is kept whole, untouched.
+      if (inCols) { run.push(line); if (kind === 'cols-close') { inCols = false; flush(); } continue; }
+      if (kind === 'cols-open') { flush(); run.push(line); inCols = true; continue; }
+      const last = rows[rows.length - 1];
+      // Indented lines right under a program line belong to it (movements, "from ...").
+      if (kind === 'text' && /^\s{2,}\S/.test(line) && run.length === 0 && last && last.type === 'item') {
+        (last.sub = last.sub || []).push(line.trim());
+        continue;
+      }
       if (kind === 'sec' || kind === 'sub') {
         flush();
         rows.push({ type: 'heading', level: kind === 'sec' ? 1 : 2, text: line.trim().replace(/^#{1,2}\s+/, '') });
@@ -68,7 +78,6 @@
     flush();
     return rows;
   }
-
   function buildBody(rows) {
     const out = [];
     const gap = () => { if (out.length && out[out.length - 1] !== '') out.push(''); };
@@ -78,6 +87,7 @@
         out.push('#'.repeat(r.level || 1) + ' ' + String(r.text || '').trim());
       } else if (r.type === 'item') {
         out.push(Layout.formatItemLine(r));
+        for (const sub of r.sub || []) out.push('  ' + sub);
       } else {
         gap();
         out.push(...r.lines);
@@ -93,6 +103,7 @@
       const s = splitComposer(row.right);
       return [row.label || '', row.mid || '', s.composer, s.years];
     }
+    if (mode === 'program') return [row.label || '', row.mid || '', row.right || '', row.note || ''];
     return [row.label || '', row.mid || '', row.right || ''];
   }
 
@@ -105,6 +116,7 @@
       if (col === 2) row.right = joinComposer(v, s.years);
       else if (col === 3) row.right = joinComposer(s.composer, v);
     } else if (col === 2) row.right = v;
+    else if (col === 3 && mode === 'program') row.note = v;
   }
 
   function newItem() {

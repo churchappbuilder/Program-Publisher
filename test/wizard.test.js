@@ -177,7 +177,7 @@ test('every program type suggests a cover that uses real artwork and layouts', (
 
 test('a graduation is tailored to a graduation, not a concert', () => {
   const visible = (kind) => Wizard.QUESTIONS.school.filter((q) => !q.showIf || q.showIf({ kind })).map((q) => q.id);
-  assert.deepStrictEqual(visible('graduation'), ['kind', 'gradCeremony', 'gradPrint']);
+  assert.deepStrictEqual(visible('graduation'), ['kind', 'gradLevel', 'gradCeremony', 'gradPrint']);
   assert.deepStrictEqual(visible('concert'), ['kind', 'groups', 'speaking', 'extras']);
   assert.deepStrictEqual(visible('play'), ['kind', 'playExtras']);
   // none of the concert-only choices are offered for a graduation
@@ -210,4 +210,34 @@ test('concerts, recitals, plays and awards each have their own sections and cove
   // formal Traditional covers for concerts, recitals and graduations
   for (const kind of ['concert', 'recital', 'graduation']) assert.strictEqual(b({ kind }).cover.style, 'traditional', kind);
   assert.strictEqual(b({ kind: 'concert' }).cover.intro, 'presents');
+});
+test('college graduations: baccalaureate first, candidate lists by college with hometowns, honors key, presiding line', () => {
+  const body = Wizard.build('school', { kind: 'graduation', gradLevel: 'college', gradCeremony: ['presiding', 'processional', 'anthem', 'keynote'],
+    gradPrint: ['graduates', 'honorsKey', 'welcomeNote', 'notices', 'hymn', 'baccalaureate'] }).body;
+  for (const must of ['# Baccalaureate Service', '# Commencement Exercises', 'Presentation of Candidates', 'Conferring of Degrees', '^ Presiding: Name, Title',
+    'National Anthem', '# Undergraduate Degree Candidates', '# Graduate Degree Candidates', '## College or School Name', '[columns 2]', 'Graduate Name | Hometown, ST',
+    '# Honors', 'Summa Cum Laude', '# Welcome', '# School Hymn']) assert.ok(body.includes(must), must);
+  assert.ok(body.indexOf('# Baccalaureate Service') < body.indexOf('===') && body.indexOf('===') < body.indexOf('# Commencement Exercises'));
+  assert.ok(!body.includes('Presentation of Diplomas'));
+  // a speaker's title goes in the small line under the name (4th part)
+  assert.ok(body.includes('Commencement Address | | Name | Title'));
+  // and a school (not a college) still prints a simple list of graduates in columns
+  const hs = Wizard.build('school', { kind: 'graduation' }).body;
+  assert.ok(hs.includes('[columns 3]') && !hs.includes('Undergraduate'));
+});
+
+test('recitals have works with sources and movements, Roman numerals, notes and the degree line', () => {
+  const r = Wizard.build('school', { kind: 'recital', recitalExtras: ['guests', 'numerals', 'degree', 'studio', 'notes', 'etiquette', 'friends'] });
+  for (const must of ['^ *Performer Name*, instrument', '^ *Accompanist Name*, piano', '^ **I**', '^ **II**', 'from *Source Title*', '  I. First movement',
+    'partial fulfillment', 'From the studio of', '# Program Notes', '## Piece Title', 'Please silence all cell phones', '# Friends and Donors']) assert.ok(r.body.includes(must), must);
+  assert.strictEqual(r.title, 'Senior Recital');
+  assert.strictEqual(r.subtitle, 'Performer Name, instrument');
+  assert.ok(!Wizard.build('school', { kind: 'recital', recitalExtras: [] }).body.includes('Accompanist'));
+});
+
+test('concert rosters list each section of the ensemble in columns', () => {
+  const b = Wizard.build('school', { kind: 'concert', groups: ['orchestra', 'choir', 'soloists'], extras: ['roster'] }).body;
+  assert.ok(b.includes('[columns 3]') && b.includes('## Violin I') && b.includes('## Cello'));
+  assert.ok(b.includes('[columns 4]') && b.includes('## Soprano') && b.includes('## Tenor'));
+  assert.ok(!b.includes('## Soloists'));   // soloists have no roster
 });

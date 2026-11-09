@@ -50,7 +50,7 @@ test('item lines round-trip', () => {
     assert.ok(it, line);
     assert.strictEqual(Layout.formatItemLine(it), line.trimEnd(), line);
   }
-  assert.deepStrictEqual({ ...Layout.parseItemLine('Sermon | | Pastor') }, { stand: false, label: 'Sermon', mid: '', right: 'Pastor' });
+  assert.deepStrictEqual({ ...Layout.parseItemLine('Sermon | | Pastor') }, { stand: false, label: 'Sermon', mid: '', right: 'Pastor', note: '' });
   assert.strictEqual(Layout.formatItemLine(Layout.parseItemLine('Sermon | | Pastor')), 'Sermon | Pastor'); // same printed result
   assert.strictEqual(Layout.parseItemLine('plain'), null);
 });
@@ -115,4 +115,39 @@ test('paste from Excel: rows and columns fill in, extra rows are added', () => {
 test('copy as table gives tab-separated item rows', () => {
   const rows = Sheet.parseRows('# A\n+ Hymn | Name | 12\nPrelude |');
   assert.strictEqual(Sheet.toTable(rows, 'service'), 'Hymn\tName\t12\nPrelude\t\t');
+});
+
+test('sheet keeps indented lines, columns blocks and the title column', () => {
+  const body = ['# Program', 'Overture | from *Carmen* | Georges Bizet (1838–1875)', '  I. Allegro', '  II. Andante', 'Invocation | | David Anderson | President',
+    '', '# The Graduates', '[columns 2]', '## BA English', 'Jack Bovay | Peoria, IL', 'Anna Morken', '[/columns]', '', 'Thank you.'].join('\n');
+  const rows = Sheet.parseRows(body);
+  assert.deepStrictEqual(rows.map((r) => r.type), ['heading', 'item', 'item', 'heading', 'other', 'other']);
+  assert.deepStrictEqual(rows[1].sub, ['I. Allegro', 'II. Andante']);       // movements stay with the piece
+  assert.ok(rows[4].lines.join('\n').includes('## BA English'));            // the roster is one untouched block, not split into rows
+  assert.strictEqual(rows[2].note, 'President');
+  assert.deepStrictEqual(Sheet.cells(rows[2], 'program'), ['Invocation', '', 'David Anderson', 'President']);
+  assert.strictEqual(Sheet.MODES.program.columns.length, 4);
+  Sheet.setCell(rows[2], 3, 'Vice President', 'program');
+  Sheet.setCell(rows[2], 2, 'Jane Doe', 'program');
+  const out = Sheet.buildBody(rows);
+  assert.ok(out.includes('Invocation | | Jane Doe | Vice President'));
+  assert.ok(out.includes('  I. Allegro\n  II. Andante'));
+  assert.ok(out.includes('[columns 2]\n## BA English'));
+  // the printed result is unchanged by a trip through the sheet
+  const htmlOf = (t) => Layout.parseBody(t).map((b) => (b.pageBreak ? '<<break>>' : b.html));
+  assert.deepStrictEqual(htmlOf(Sheet.buildBody(Sheet.parseRows(body))), htmlOf(body));
+});
+
+test('every wizard result survives the sheet round trip, including rosters and candidate lists', () => {
+  const Wizard = require('../src/shared/wizard');
+  const htmlOf = (t) => Layout.parseBody(t).map((b) => (b.pageBreak ? '<<break>>' : b.html));
+  const cases = [
+    { kind: 'graduation', gradLevel: 'college', gradCeremony: ['presiding', 'processional', 'anthem', 'keynote', 'honors'], gradPrint: ['graduates', 'honorsKey', 'welcomeNote', 'notices', 'hymn', 'baccalaureate', 'faculty'] },
+    { kind: 'recital', recitalExtras: ['guests', 'numerals', 'degree', 'studio', 'notes', 'etiquette', 'friends', 'roster'] },
+    { kind: 'concert', groups: ['band', 'choir', 'orchestra', 'jazz'], extras: ['roster', 'notes', 'friends', 'etiquette', 'sponsors', 'upcoming'] }
+  ];
+  for (const c of cases) {
+    const body = Wizard.build('school', c).body;
+    assert.deepStrictEqual(htmlOf(Sheet.buildBody(Sheet.parseRows(body))), htmlOf(body), c.kind);
+  }
 });

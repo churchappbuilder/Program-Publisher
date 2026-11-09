@@ -175,3 +175,33 @@ h2 { font-family: var(--heading-font); font-size: 1.5em; margin: 0 0 .3em; line-
 .cv.cv-traditional .date { font-size: .8em; opacity: 1; margin-top: .15em; }
 .cv-traditional .cvfoot { font-size: .8em; margin-top: 0; line-height: 1.5; }
 .cv-traditional .cvinfo { margin-top: .8em; }
+
+/* ---------- program lines: leaders, stacked names, indented lines, columns ---------- */
+.item { border-bottom: 0; }
+.item .fill { flex: 1 1 auto; min-width: .8em; align-self: flex-end; border-bottom: 1px dotted rgba(0, 0, 0, .55); margin: 0 .35em .38em; }
+.item .rt.stack { display: inline-flex; flex-direction: column; align-items: flex-end; text-align: right; line-height: 1.25; }
+.item .rt.stack .r2 { font-size: .86em; opacity: .85; }
+.item .rt.stack .r2:last-child { font-style: italic; }
+.item .rt.stack .r1 + .r2 { font-style: normal; }
+.entry { margin: .1em 0 .35em; }
+.entry .worksub, .entry .subs { font-size: .64em; line-height: 1.45; padding-left: 1.6em; }
+.entry .worksub { font-style: italic; }
+.entry .subs > div { margin: 0; }
+
+.cols { column-gap: 1.3em; margin: .3em 0 .5em; font-size: .62em; line-height: 1.45; text-align: left; orphans: 1; widows: 1; }
+.cols .csub { font-weight: 700; margin: .7em 0 .15em; break-after: avoid; font-family: var(--heading-font); color: var(--primary); }
+.cols .csub:first-child { margin-top: 0; }
+.cols .nm { break-inside: avoid; display: flex; flex-wrap: wrap; gap: 0 .5em; align-items: baseline; }
+.cols .n2 { font-size: .85em; font-style: italic; opacity: .75; }
+
+/* the logo faintly behind the text, like a watermark */
+.cv-wm .inner { position: relative; }
+.cv-wm .inner > .cv-water { position: absolute; left: 50%; top: 50%; width: 118%; transform: translate(-50%, -50%); opacity: .07; pointer-events: none; z-index: 0; flex: none; }
+.cv-water img { width: 100%; display: block; }
+.cv-wm .inner > :not(.cv-water):not(.cv-bleed) { position: relative; z-index: 1; }
+
+/* leader dots sit on the first line of the right-hand text */
+.item .fill { align-self: baseline; margin: 0 .4em; transform: translateY(-.14em); }
+
+/* full-page cover: built-in art sits in the open space between the name and the title band */
+.cv-full .cv-bleed.art .cvart { margin-top: 32%; height: 36%; }

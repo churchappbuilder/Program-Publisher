@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Program Publisher — free bulletins and programs for churches and schools</title>
+<meta name="description" content="Program Publisher is a free, open-source Windows app that helps churches and schools design and print bulletins, worship programs, concert programs and graduation programs. Works offline.">
+<meta property="og:title" content="Program Publisher">
+<meta property="og:description" content="Free, open-source bulletins and programs for churches and schools. Works offline.">
+<meta property="og:image" content="https://churchappbuilder.github.io/Program-Publisher/site/img/covers.jpg">
+<style>
+:root { --navy:#1f3a5f; --navy2:#16294a; --gold:#b08d3c; --gold2:#d4b160; --ink:#1d2430; --muted:#5d6675; --bg:#faf8f3; --card:#ffffff; --line:#e6e1d4; --shadow:0 2px 6px rgba(20,30,50,.08),0 18px 40px rgba(20,30,50,.14); }
+@media (prefers-color-scheme: dark) { :root { --ink:#eceff4; --muted:#a6afbd; --bg:#12161d; --card:#1b212b; --line:#2b3340; --shadow:0 2px 6px rgba(0,0,0,.4),0 18px 40px rgba(0,0,0,.5); } }
+* { box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { margin:0; background:var(--bg); color:var(--ink); font:17px/1.6 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif; }
+h1,h2,h3 { font-family:Georgia,"Times New Roman",serif; line-height:1.2; margin:0 0 .5em; }
+h2 { font-size:clamp(28px,4vw,40px); }
+a { color:var(--navy); } @media (prefers-color-scheme: dark) { a { color:var(--gold2); } }
+img { max-width:100%; display:block; }
+.wrap { max-width:1120px; margin:0 auto; padding:0 20px; }
+section { padding:80px 0; }
+.eyebrow { text-transform:uppercase; letter-spacing:.14em; font-size:13px; font-weight:700; color:var(--gold); margin-bottom:10px; }
+.lead { font-size:19px; color:var(--muted); max-width:720px; }
+.center { text-align:center; } .center .lead { margin-left:auto; margin-right:auto; }
+
+nav { position:sticky; top:0; z-index:20; background:color-mix(in srgb,var(--bg) 88%,transparent); backdrop-filter:blur(10px); border-bottom:1px solid var(--line); }
+nav .wrap { display:flex; align-items:center; gap:22px; height:62px; }
+nav .brand { font:700 20px Georgia,serif; color:var(--ink); text-decoration:none; margin-right:auto; }
+nav a.l { color:var(--muted); text-decoration:none; font-size:15px; } nav a.l:hover { color:var(--ink); }
+@media (max-width:760px) { nav a.l { display:none; } }
+
+.btn { display:inline-flex; align-items:center; gap:10px; padding:14px 26px; border-radius:12px; font-weight:700; font-size:17px; text-decoration:none; border:2px solid transparent; cursor:pointer; transition:transform .15s, box-shadow .15s; }
+.btn:hover { transform:translateY(-2px); }
+.btn.gold { background:linear-gradient(180deg,var(--gold2),var(--gold)); color:#1b1405; box-shadow:0 8px 22px rgba(176,141,60,.4); }
+.btn.ghost { border-color:rgba(255,255,255,.5); color:#fff; }
+.btn.line { border-color:var(--navy); color:var(--navy); } @media (prefers-color-scheme: dark) { .btn.line { border-color:var(--gold2); color:var(--gold2); } }
+.btn.small { padding:9px 18px; font-size:15px; }
+
+.hero { background:radial-gradient(1200px 500px at 80% -10%,#33598a 0,transparent 60%),linear-gradient(160deg,var(--navy),var(--navy2)); color:#fff; padding:70px 0 90px; overflow:hidden; }
+.hero .wrap { display:grid; grid-template-columns:1.05fr 1fr; gap:40px; align-items:center; }
+.hero h1 { font-size:clamp(38px,5.4vw,60px); }
+.hero h1 span { color:var(--gold2); }
+.hero p { font-size:20px; color:#d6deea; max-width:520px; }
+.hero .cta { display:flex; flex-wrap:wrap; gap:14px; margin:30px 0 14px; }
+.hero .meta { font-size:14px; color:#aab8cc; }
+.fan { position:relative; height:480px; }
+.fan img { position:absolute; width:46%; border-radius:6px; box-shadow:0 24px 50px rgba(0,0,0,.45); transition:transform .3s; }
+.fan img:nth-child(1) { left:2%; top:46px; transform:rotate(-8deg); }
+.fan img:nth-child(2) { left:27%; top:0; transform:rotate(-1deg); z-index:2; width:50%; }
+.fan img:nth-child(3) { right:0; top:56px; transform:rotate(7deg); }
+.fan:hover img:nth-child(1) { transform:rotate(-11deg) translateX(-8px); } .fan:hover img:nth-child(3) { transform:rotate(10deg) translateX(8px); }
+@media (max-width:900px) { .hero .wrap { grid-template-columns:1fr; } .fan { height:380px; } }
+
+.strip { background:var(--card); border-block:1px solid var(--line); padding:26px 0; }
+.strip .wrap { display:flex; flex-wrap:wrap; justify-content:center; gap:10px 34px; color:var(--muted); font-weight:600; font-size:15px; }
+.strip b { color:var(--gold); }
+
+.tabs { display:flex; justify-content:center; gap:8px; margin:30px 0 34px; }
+.tabs button { font:600 16px "Segoe UI",sans-serif; padding:10px 26px; border-radius:999px; border:2px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; }
+.tabs button[aria-pressed="true"] { background:var(--navy); border-color:var(--navy); color:#fff; }
+.gal { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:26px; }
+.ex { background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; box-shadow:var(--shadow); cursor:pointer; text-align:left; padding:0; font:inherit; color:inherit; transition:transform .2s; }
+.ex:hover { transform:translateY(-5px); }
+.ex .pic { background:linear-gradient(160deg,#e8e5de,#d8d3c6); padding:22px; display:flex; justify-content:center; }
+.ex .pic img { height:300px; width:auto; box-shadow:0 10px 24px rgba(0,0,0,.28); }
+.ex .txt { padding:16px 18px 20px; }
+.ex h3 { font-size:20px; margin-bottom:4px; } .ex p { margin:0; font-size:14.5px; color:var(--muted); line-height:1.5; }
+.ex .org { font-size:12.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--gold); font-weight:700; margin-top:10px; }
+.note { text-align:center; color:var(--muted); font-size:14px; margin-top:26px; }
+.covers { margin-top:60px; background:var(--card); border:1px solid var(--line); border-radius:18px; padding:30px; box-shadow:var(--shadow); }
+.covers img { margin:18px auto 0; border-radius:8px; }
+
+.band { background:linear-gradient(180deg,rgba(176,141,60,.08),transparent); }
+.feat { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:22px; margin-top:44px; }
+.fc { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:26px; }
+.fc .ic { width:46px; height:46px; border-radius:12px; background:var(--navy); color:var(--gold2); display:grid; place-items:center; font-size:22px; margin-bottom:14px; }
+.fc h3 { font-size:20px; margin-bottom:6px; } .fc p { margin:0; color:var(--muted); font-size:15.5px; }
+
+.steps { display:grid; gap:70px; margin-top:50px; }
+.step { display:grid; grid-template-columns:1fr 1.25fr; gap:44px; align-items:center; }
+.step:nth-child(even) .stxt { order:2; }
+.num { width:44px; height:44px; border-radius:50%; background:var(--gold); color:#1b1405; font:700 22px Georgia,serif; display:grid; place-items:center; margin-bottom:14px; }
+.shot { border-radius:14px; border:1px solid var(--line); box-shadow:var(--shadow); overflow:hidden; background:#fff; }
+@media (max-width:860px) { .step { grid-template-columns:1fr; } .step:nth-child(even) .stxt { order:0; } }
+.more { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:26px; margin-top:60px; }
+
+.dl { background:linear-gradient(160deg,var(--navy),var(--navy2)); color:#fff; border-radius:24px; padding:54px 40px; text-align:center; box-shadow:var(--shadow); }
+.dl h2 { color:#fff; } .dl p { color:#d6deea; max-width:620px; margin:0 auto 24px; }
+.dl ol { text-align:left; max-width:620px; margin:30px auto 0; color:#d6deea; padding-left:22px; font-size:16px; }
+.dl ol b { color:#fff; }
+
+.help { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:20px; margin-top:40px; }
+.hc { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:24px; display:flex; flex-direction:column; }
+.hc h3 { font-size:19px; } .hc p { color:var(--muted); font-size:15px; margin:0 0 16px; flex:1; }
+code, pre { font-family:Consolas,"Cascadia Mono",monospace; }
+pre { background:#0f1623; color:#dfe7f3; padding:18px 20px; border-radius:12px; overflow:auto; font-size:14.5px; margin:26px 0 0; }
+footer { border-top:1px solid var(--line); padding:40px 0; color:var(--muted); font-size:14.5px; text-align:center; }
+
+#lb { position:fixed; inset:0; background:rgba(8,12,20,.9); z-index:50; display:none; flex-direction:column; align-items:center; justify-content:center; padding:20px; gap:14px; }
+#lb.on { display:flex; }
+#lb .imgs { display:flex; gap:20px; max-height:80vh; max-width:96vw; overflow:auto; align-items:flex-start; }
+#lb .imgs img { max-height:78vh; width:auto; max-width:none; border-radius:4px; box-shadow:0 20px 60px rgba(0,0,0,.6); }
+#lb .cap { color:#fff; text-align:center; max-width:640px; } #lb .cap b { font:700 22px Georgia,serif; display:block; }
+#lb button { position:absolute; top:16px; right:20px; background:none; border:0; color:#fff; font-size:38px; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a class="brand" href="#top">Program Publisher</a>
+  <a class="l" href="#examples">Examples</a><a class="l" href="#features">What it does</a><a class="l" href="#how">How it works</a><a class="l" href="#help">Help build it</a>
+  <a class="btn gold small" href="#download">Download</a>
+</div></nav>
+
+<header class="hero" id="top"><div class="wrap">
+  <div>
+    <div class="eyebrow" style="color:var(--gold2)">Free &amp; open source</div>
+    <h1>Beautiful bulletins and programs, <span>without the headache.</span></h1>
+    <p>Answer a few questions and Program Publisher builds your Sunday bulletin, funeral or wedding program, school concert, recital or graduation. Add your logo, pick your paper, and print.</p>
+    <div class="cta">
+      <a class="btn gold" id="dlBtn" href="https://github.com/churchappbuilder/Program-Publisher/releases/latest">⬇ Download for Windows</a>
+      <a class="btn ghost" href="#examples">See what it makes</a>
+    </div>
+    <div class="meta" id="dlMeta">Free forever · Works offline · No account · No subscription</div>
+  </div>
+  <div class="fan" aria-hidden="true">
+    <img src="site/img/presbyterian-cover.jpg" alt="">
+    <img src="site/img/graduation-cover.jpg" alt="">
+    <img src="site/img/christmas-cover.jpg" alt="">
+  </div>
+</div></header>
+
+<div class="strip"><div class="wrap">
+  <span><b>✓</b> Made for pastors, secretaries &amp; teachers</span><span><b>✓</b> Runs on your own computer</span><span><b>✓</b> Correct page order for folded booklets</span><span><b>✓</b> Your church’s or school’s logo, fonts and colors</span>
+</div></div>
+
+<section id="examples"><div class="wrap">
+  <div class="center">
+    <div class="eyebrow">What it makes</div>
+    <h2>Everything on this page was made with the app.</h2>
+    <p class="lead">These sample programs are for made-up churches and schools. Click any of them to see the inside pages up close.</p>
+    <div class="tabs" role="group" aria-label="Show examples for">
+      <button data-g="Church" aria-pressed="true">Churches</button><button data-g="School" aria-pressed="false">Schools</button><button data-g="all" aria-pressed="false">All</button>
+    </div>
+  </div>
+  <div class="gal" id="gal"></div>
+  <p class="note">All sample names, hometowns and logos are invented for illustration.</p>
+  <div class="covers center">
+    <h3>Seven cover layouts to start from</h3>
+    <p class="lead">Classic, traditional, name on top, picture feature, full-page picture, color banner and framed. Add your logo, a seasonal picture or a verse.</p>
+    <img src="site/img/covers.jpg" alt="Seven cover layouts shown side by side" loading="lazy">
+  </div>
+</div></section>
+
+<section id="features" class="band"><div class="wrap">
+  <div class="center"><div class="eyebrow">What it does</div><h2>Built around how churches and schools really print.</h2></div>
+  <div class="feat">
+    <div class="fc"><div class="ic">❓</div><h3>Just answer questions</h3><p>Tell it what kind of service or program, your tradition or school, and what to include. It builds the whole order for you.</p></div>
+    <div class="fc"><div class="ic">⛪</div><h3>Many traditions</h3><p>Presbyterian, Anglican, Lutheran (ELCA &amp; LCMS), Methodist, contemporary and simple, with the right hymnal labels.</p></div>
+    <div class="fc"><div class="ic">🎓</div><h3>School programs too</h3><p>Concerts, recitals, graduations, plays and awards nights. Rosters, honors and composers laid out like the real thing.</p></div>
+    <div class="fc"><div class="ic">🖼</div><h3>Your identity</h3><p>Keep each church or school’s logos (shield, banner, seal), fonts and colors. Run as many organizations as you like.</p></div>
+    <div class="fc"><div class="ic">📋</div><h3>Weekly fill-in sheet</h3><p>Type hymn numbers and names into a simple grid, or paste from Excel. The bulletin updates as you type.</p></div>
+    <div class="fc"><div class="ic">📖</div><h3>Prayers &amp; creeds included</h3><p>A library of public-domain creeds, prayers and four catechisms you can add in one click.</p></div>
+    <div class="fc"><div class="ic">📄</div><h3>Print-ready PDF</h3><p>Half-sheet booklets, legal and tri-fold. Pages come out in the right order for folding and stapling.</p></div>
+    <div class="fc"><div class="ic">🛡</div><h3>Private &amp; free</h3><p>Runs entirely on your computer. Nothing is uploaded and there is nothing to subscribe to. GPL v3 open source.</p></div>
+  </div>
+</div></section>
+
+<section id="how"><div class="wrap">
+  <div class="center"><div class="eyebrow">How it works</div><h2>From blank page to printed in three steps.</h2></div>
+  <div class="steps">
+    <div class="step"><div class="stxt"><div class="num">1</div><h3>Start a program</h3><p class="lead" style="font-size:17px">Pick “New program” and answer a few plain-language questions, or start from a ready-made template. Switch between your church and school with one click.</p></div>
+      <div class="shot"><img src="site/img/ui-home.jpg" alt="Program Publisher start screen" loading="lazy"></div></div>
+    <div class="step"><div class="stxt"><div class="num">2</div><h3>Fill in this week</h3><p class="lead" style="font-size:17px">Choose what goes on the ceremony and what gets printed. Then fill in hymn numbers, readings and names in a simple grid.</p></div>
+      <div class="shot"><img src="site/img/ui-wizard-school.jpg" alt="The graduation question screen" loading="lazy"></div></div>
+    <div class="step"><div class="stxt"><div class="num">3</div><h3>Make it yours, then print</h3><p class="lead" style="font-size:17px">Design the cover, choose paper size and color, see a live preview, and save a print-ready PDF.</p></div>
+      <div class="shot"><img src="site/img/ui-cover.jpg" alt="The cover designer" loading="lazy"></div></div>
+  </div>
+  <div class="more">
+    <div><div class="shot"><img src="site/img/ui-sheet.jpg" alt="The weekly fill-in sheet" loading="lazy"></div><p class="note">The weekly fill-in sheet</p></div>
+    <div><div class="shot"><img src="site/img/ui-logos.jpg" alt="The logo library" loading="lazy"></div><p class="note">A library of logos for each church or school</p></div>
+  </div>
+</div></section>
+
+<section id="download"><div class="wrap">
+  <div class="dl">
+    <div class="eyebrow" style="color:var(--gold2)">Get it</div>
+    <h2>Download Program Publisher</h2>
+    <p>Free for churches, schools and anyone who prints programs. Windows 10 or 11.</p>
+    <a class="btn gold" id="dlBtn2" href="https://github.com/churchappbuilder/Program-Publisher/releases/latest">⬇ Download for Windows</a>
+    <div class="meta" style="margin-top:12px;font-size:14px;color:#aab8cc" id="dlMeta2"></div>
+    <ol>
+      <li><b>Download</b> the installer (a file ending in <code>.exe</code>).</li>
+      <li><b>Open it.</b> Windows may say “Windows protected your PC” because the app is new and unsigned. Choose <b>More info</b>, then <b>Run anyway</b>.</li>
+      <li><b>Start Program Publisher</b> from your Start menu and set up your church or school.</li>
+    </ol>
+  </div>
+</div></section>
+
+<section id="help" class="band"><div class="wrap">
+  <div class="center"><div class="eyebrow">Help build it</div><h2>This is a community project, and you can help.</h2>
+    <p class="lead">You do not need to write code. Pastors, secretaries, band directors and teachers know things programmers do not.</p></div>
+  <div class="help">
+    <div class="hc"><h3>💡 Suggest an idea</h3><p>Something missing? Tell us what you print and what would save you time.</p><a class="btn line small" href="https://github.com/churchappbuilder/Program-Publisher/issues/new">Open an idea</a></div>
+    <div class="hc"><h3>🐞 Report a problem</h3><p>If something looks wrong or confusing, let us know what you were doing.</p><a class="btn line small" href="https://github.com/churchappbuilder/Program-Publisher/issues/new">Report a bug</a></div>
+    <div class="hc"><h3>⛪ Correct an order of worship</h3><p>If your tradition’s order is off, tell us how yours actually goes.</p><a class="btn line small" href="https://github.com/churchappbuilder/Program-Publisher/issues/new">Send a correction</a></div>
+    <div class="hc"><h3>🧑‍💻 Change the code</h3><p>Fork the project, make your change and open a pull request. See CONTRIBUTING.</p><a class="btn line small" href="https://github.com/churchappbuilder/Program-Publisher/blob/main/CONTRIBUTING.md">How to contribute</a></div>
+  </div>
+<pre>git clone https://github.com/churchappbuilder/Program-Publisher.git
+cd Program-Publisher
+npm install
+npm start      # run the app
+npm test       # run the tests</pre>
+</div></section>
+
+<footer><div class="wrap">
+  Program Publisher is free software under the <a href="https://github.com/churchappbuilder/Program-Publisher/blob/main/LICENSE">GNU GPL v3</a> ·
+  <a href="https://github.com/churchappbuilder/Program-Publisher">Source on GitHub</a> ·
+  Catechism texts courtesy of <a href="https://reformededucation.org/catechisms.html">reformededucation.org</a>.
+  <br>Sample churches, schools and people shown on this page are fictional.
+</div></footer>
+
+<div id="lb" role="dialog" aria-modal="true"><button aria-label="Close">×</button><div class="imgs"></div><div class="cap"></div></div>
+
+<script>
+const EXAMPLES = [
+  ['presbyterian','Church','Presbyterian worship','Formal order of worship with hymns, the creed and the Lord’s Prayer.','Grace Community Church',0],
+  ['anglican','Church','Anglican Holy Eucharist','Full liturgy with Celebrant and People parts, in bold where the congregation speaks.','St. Aidan’s',1],
+  ['lutheran','Church','Lutheran Holy Communion','Gathering, Word, Meal and Sending, with the hymnal numbers Lutherans use.','Church',0],
+  ['methodist','Church','Methodist Sunday worship','A responsive call to worship, the Doxology and a prayer of dedication.','Church',0],
+  ['christmas','Church','Christmas Eve','Lessons and carols with seasonal art on the cover, printed on cream paper.','Church',0],
+  ['funeral','Church','Funeral service','A quiet, framed cover and a complete order of service for a memorial.','Church',0],
+  ['wedding','Church','Wedding ceremony','A framed cover and the order of the ceremony with the wedding party.','Church',0],
+  ['graduation','School','College commencement','Baccalaureate and commencement orders, then degree candidates by college with hometowns.','School',0],
+  ['orchestra','School','Orchestra concert','Composers and dates stacked beside each piece, with the orchestra listed by section.','School',0],
+  ['recital','School','Senior recital','Works with sources and movements, Roman-numeral groups and program notes.','School',0],
+  ['play','School','School play','Cast, scenes and crew for a school production, with a note from the director.','School',0]
+];
+let gal; try { gal = null; } catch (e) {}
+const galEl = document.getElementById('gal');
+function show(g) {
+  galEl.innerHTML = '';
+  EXAMPLES.filter(e => g === 'all' || e[1] === g).forEach(e => {
+    const b = document.createElement('button'); b.className = 'ex'; b.type = 'button';
+    b.innerHTML = '<div class="pic"><img loading="lazy" alt="' + e[2] + ' cover" src="site/img/' + e[0] + '-cover.jpg"></div><div class="txt"><h3>' + e[2] + '</h3><p>' + e[3] + '</p><div class="org">' + e[1] + ' sample</div></div>';
+    b.onclick = () => open(e);
+    galEl.appendChild(b);
+  });
+  document.querySelectorAll('.tabs button').forEach(t => t.setAttribute('aria-pressed', t.dataset.g === g));
+}
+document.querySelectorAll('.tabs button').forEach(t => t.onclick = () => show(t.dataset.g));
+show('Church');
+
+const lb = document.getElementById('lb');
+function open(e) {
+  const imgs = ['cover', 'inside'].concat(e[5] ? ['inside2'] : []).map(k => '<img alt="' + e[2] + ' ' + k + '" src="site/img/' + e[0] + '-' + k + '.jpg">').join('');
+  lb.querySelector('.imgs').innerHTML = imgs;
+  lb.querySelector('.cap').innerHTML = '<b>' + e[2] + '</b>' + e[3];
+  lb.classList.add('on');
+}
+lb.onclick = (ev) => { if (ev.target === lb || ev.target.tagName === 'BUTTON') lb.classList.remove('on'); };
+document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') lb.classList.remove('on'); });
+
+// Point the download buttons straight at the newest installer, when the release can be found.
+fetch('https://api.github.com/repos/churchappbuilder/Program-Publisher/releases/latest').then(r => r.ok ? r.json() : null).then(rel => {
+  if (!rel) return;
+  const a = (rel.assets || []).find(x => /\.exe$/i.test(x.name));
+  if (!a) return;
+  const mb = Math.round(a.size / 1048576);
+  ['dlBtn', 'dlBtn2'].forEach(id => document.getElementById(id).href = a.browser_download_url);
+  const t = 'Version ' + rel.tag_name.replace(/^v/, '') + ' · ' + mb + ' MB · Windows 10/11';
+  document.getElementById('dlMeta').textContent = t + ' · Free forever · Works offline';
+  document.getElementById('dlMeta2').textContent = t;
+}).catch(() => {});
+</script>
+</body>
+</html>

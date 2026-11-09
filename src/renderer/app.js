@@ -19,6 +19,10 @@ const state = {
   view: 'home',       // which screen is showing: home | wizard | editor
   caret: null,        // last cursor position in the body text box (null = add things at the end)
   coverUrl: null,     // the picture chosen for the current cover (data URL), if any
+  coverLogoUrl: null, // the logo chosen for the current cover (data URL), if not the main one
+  logos: [],          // logos shown in the organization dialog
+  coverLogoUrl: null, // the logo chosen for the current cover (data URL), if not the main one
+  logos: [],          // logos shown in the organization dialog
   dialogOrgId: null   // org being edited in the dialog (null = new)
 };
 
@@ -118,7 +122,7 @@ function render() {
   $('formatNote').textContent = f.note;
 
   // Flow the text across pages and work out the printed sheets.
-  const layout = Layout.paginate(document, geo, { org, content: currentContent(), logoUrl: state.logoUrl, coverUrl: state.coverUrl });
+  const layout = Layout.paginate(document, geo, { org, content: currentContent(), logoUrl: state.logoUrl, coverUrl: state.coverUrl, coverLogoUrl: state.coverLogoUrl });
   const nSides = layout.sides.length;
   if (state.side >= nSides) state.side = nSides - 1;
   if (state.side < 0) state.side = 0;
@@ -280,6 +284,28 @@ function findText(value) {
   const [kind, id] = String(value).split(':');
   if (kind === 'org') return state.texts.find((t) => t.id === Number(id)) || null;
   return state.builtin.find((t) => t.id === id) || null;
+}
+
+// "Add a list of names": turns pasted names (one per line, optional detail after a tab or |)
+// into a [columns N] block in the program.
+function wireNames() {
+  $('namesOpen').onclick = () => {
+    $('nm_msg').textContent = '';
+    $('namesDialog').showModal();
+    $('nm_text').focus();
+  };
+  $('nm_cancel').onclick = () => $('namesDialog').close();
+  $('nm_add').onclick = () => {
+    const lines = $('nm_text').value.split(/\r?\n/).map((l) => l.replace(/\t/g, ' | ').trim()).filter(Boolean);
+    if (!lines.length) { $('nm_msg').textContent = 'Paste or type at least one name first.'; return; }
+    const heading = $('nm_heading').value.trim();
+    const n = Number($('nm_cols').value) || 2;
+    const block = (heading ? '# ' + heading + '\n\n' : '') + '[columns ' + n + ']\n' + lines.join('\n') + '\n[/columns]';
+    $('namesDialog').close();
+    insertIntoBody(block);
+    $('nm_text').value = '';
+    $('nm_heading').value = '';
+  };
 }
 
 // Put text into the body at the cursor, separated from its neighbors by blank lines.
@@ -501,10 +527,10 @@ function openTemplate(id) {
 
 // A small picture of a template, using the organization's own logo, colors and fonts.
 // It is laid out at true size and shrunk, so it matches what will print.
-function makeThumb(format, colorId, content, coverUrl) {
+function makeThumb(format, colorId, content, coverUrl, coverLogoUrl) {
   const org = state.org;
   const geo = Layout.geometry(format);
-  const layout = Layout.paginate(document, geo, { org, content, logoUrl: state.logoUrl, coverUrl });
+  const layout = Layout.paginate(document, geo, { org, content, logoUrl: state.logoUrl, coverUrl, coverLogoUrl });
   const side = 0; // the outside, so the cover shows
   const W = format.width * Layout.PX_PER_IN, H = format.height * Layout.PX_PER_IN;
   const k = Math.min(176 / W, 132 / H);
@@ -565,10 +591,10 @@ function renderHome() {
   if (!rec.length) recent.innerHTML = '<p class="emptyNote">Nothing here yet. Start a new program, or pick a template below.</p>';
   const thumbs = [];
   // Covers that use one of the church's own pictures need that picture loaded first.
-  const missing = [...new Set(rec.map((t) => coverAssetId(t.content)).filter((id) => id && !assetUrlCache.has(id)))];
+  const missing = [...new Set(rec.flatMap((t) => [coverAssetId(t.content), coverLogoId(t.content)]).filter((id) => id && !assetUrlCache.has(id)))];
   if (missing.length) Promise.all(missing.map(assetUrl)).then(() => { if (state.view === 'home') renderHome(); });
   for (const t of rec) {
-    const th = makeThumb(formatById(t.format_id), t.color_id, t.content, coverUrlSync(t.content));
+    const th = makeThumb(formatById(t.format_id), t.color_id, t.content, coverUrlSync(t.content), coverLogoUrlSync(t.content));
     const when = new Date(String(t.updated_at).replace(' ', 'T') + 'Z');
     const card = makeCard(t.name, 'Edited ' + (isNaN(when) ? '' : when.toLocaleDateString()), th, () => openTemplate(t.id));
     recent.appendChild(card);
@@ -788,11 +814,18 @@ function coverAssetId(content) {
   const cv = Layout.normCover(content && content.cover);
   return cv.art.kind === 'asset' && cv.art.id ? Number(cv.art.id) : null;
 }
+function coverLogoId(content) {
+  const cv = Layout.normCover(content && content.cover);
+  return cv.logoId ? Number(cv.logoId) : null;
+}
+const coverLogoUrlSync = (content) => { const id = coverLogoId(content); return id ? assetUrlCache.get(id) || null : null; };
 const coverUrlSync = (content) => { const id = coverAssetId(content); return id ? assetUrlCache.get(id) || null : null; };
 
 async function refreshCoverUrl() {
   const id = state.tpl ? coverAssetId(state.tpl.content) : null;
   state.coverUrl = id ? await assetUrl(id) : null;
+  const lid = state.tpl ? coverLogoId(state.tpl.content) : null;
+  state.coverLogoUrl = lid ? await assetUrl(lid) : null;
 }
 
 // The cover chosen in the wizard: the style the person picked, plus art that suits the program.
@@ -827,12 +860,12 @@ function coverBox(cover, widthPx) {
   sheet.className = 'sheet';
   sheet.style.cssText = `width:${W}px;height:${H}px;font-size:${Layout.PX_PER_IN * Layout.EM_IN}px;transform:scale(${k});background:#fff`;
   Layout.setVars(sheet, org);
-  sheet.innerHTML = Layout.coverPanel({ org, content, logoUrl: state.logoUrl, coverUrl: state.coverUrl }, content);
+  sheet.innerHTML = Layout.coverPanel({ org, content, logoUrl: state.logoUrl, coverUrl: state.coverUrl, coverLogoUrl: state.coverLogoUrl }, content);
   box.appendChild(sheet);
   return { box, sheet };
 }
 
-const cvState = { images: [] };
+const cvState = { images: [], logos: [] };
 
 function currentCover() { return Layout.normCover(state.tpl.content.cover); }
 
@@ -891,6 +924,10 @@ function renderCoverDialog() {
   document.querySelectorAll('#cv_emph button').forEach((b) => b.classList.toggle('active', b.dataset.e === cover.emphasis));
   document.querySelectorAll('#cv_logoSize button').forEach((b) => b.classList.toggle('active', b.dataset.s === cover.logoSize));
   $('cv_trad').hidden = cover.style !== 'traditional';
+  const lsel = $('cv_logoSel');
+  const main = state.org && state.org.logo_asset_id;
+  lsel.innerHTML = '<option value="">The main logo</option>' + cvState.logos.filter((l) => l.id !== main).map((l) => `<option value="${l.id}">${Layout.esc(l.name)} (${Layout.esc(logoRoleName(l.role))})</option>`).join('');
+  lsel.value = cover.logoId && cvState.logos.some((l) => l.id === cover.logoId) ? String(cover.logoId) : '';
   $('cv_builtin').hidden = cover.art.kind !== 'builtin';
   $('cv_asset').hidden = cover.art.kind !== 'asset';
 
@@ -915,6 +952,7 @@ function renderCoverDialog() {
 
   const chk = { cv_logo: 'logo', cv_name: 'name', cv_tagline: 'tagline', cv_date: 'date', cv_address: 'address' };
   for (const [id, key] of Object.entries(chk)) $(id).checked = !!cover.show[key];
+  $('cv_water').checked = !!cover.watermark;
 
   renderCoverPreviews();
 }
@@ -922,6 +960,7 @@ function renderCoverDialog() {
 async function openCoverDialog() {
   if (!state.tpl) return;
   cvState.images = await window.api.assets.list(state.org.id, 'image');
+  cvState.logos = await window.api.assets.list(state.org.id, 'logo');
   const c = currentCover();
   $('cv_quote').value = c.quote;
   $('cv_footer').value = c.footer;
@@ -935,6 +974,12 @@ function wireCover() {
   $('coverOpen').onclick = openCoverDialog;
   $('cv_done').onclick = () => $('coverDialog').close();
   document.querySelectorAll('#cv_emph button').forEach((b) => { b.onclick = () => setCover({ emphasis: b.dataset.e }); });
+  $('cv_logoSel').onchange = async () => {
+    setCover({ logoId: $('cv_logoSel').value ? Number($('cv_logoSel').value) : '' }, false);
+    await refreshCoverUrl();
+    render();
+    renderCoverDialog();
+  };
   document.querySelectorAll('#cv_picKind button').forEach((b) => {
     b.onclick = () => {
       const k = b.dataset.k;
@@ -956,6 +1001,7 @@ function wireCover() {
       const asset = await window.api.assets.pick(state.org.id, 'image');
       if (!asset) return;
       cvState.images = await window.api.assets.list(state.org.id, 'image');
+  cvState.logos = await window.api.assets.list(state.org.id, 'logo');
       setCover({ art: { kind: 'asset', id: asset.id } }, false);
       await refreshCoverUrl();
       render();
@@ -968,6 +1014,7 @@ function wireCover() {
   for (const [id, key] of Object.entries(chk)) {
     $(id).onchange = () => setCover({ show: { ...currentCover().show, [key]: $(id).checked } });
   }
+  $('cv_water').onchange = () => setCover({ watermark: $('cv_water').checked });
   $('cv_quote').addEventListener('input', () => { setCover({ quote: $('cv_quote').value }, false); renderCoverPreviews(); });
   $('cv_footer').addEventListener('input', () => { setCover({ footer: $('cv_footer').value }, false); renderCoverPreviews(); });
   $('cv_intro').addEventListener('input', () => { setCover({ intro: $('cv_intro').value }, false); renderCoverPreviews(); });
@@ -977,8 +1024,34 @@ function wireCover() {
 
 // ---------- organizations ----------
 
+// Organizations made before the app asked "church or school?" were all recorded as churches.
+// If the name clearly says it is a school, switch it (once) and offer to remove the weekly
+// church services the app created for it, so a school sees only school programs.
+const SCHOOL_NAME_RE = /\b(school|schools|academy|college|university|institute|seminary|education|educational|elementary|kindergarten|k-12)\b/i;
+
+async function maybeSwitchToSchool(org) {
+  if (!org || org.kind !== 'church' || !SCHOOL_NAME_RE.test(org.name)) return org;
+  const flag = 'kindChecked:' + org.id;
+  if (await window.api.settings.get(flag)) return org;
+  await window.api.settings.set(flag, '1');
+  const updated = await window.api.orgs.update(org.id, { kind: 'school' });
+  const i = state.orgs.findIndex((o) => o.id === org.id);
+  if (i >= 0) state.orgs[i] = updated;
+  // The two starter services the app made, if the person never edited them.
+  const tpls = await window.api.templates.list(org.id);
+  const unused = tpls.filter((t) => ['morning', 'evening'].includes(t.service_type) && t.created_at === t.updated_at);
+  if (unused.length) {
+    const names = unused.map((t) => `"${t.name}"`).join(' and ');
+    if (confirm(`"${org.name}" looks like a school, so it is now set up as a school and the weekly church services are hidden.\n\nRemove the unused church ${unused.length === 1 ? 'service' : 'services'} ${names} from your list?`)) {
+      for (const t of unused) await window.api.templates.delete(t.id);
+    }
+  }
+  return updated;
+}
+
 async function selectOrg(id) {
   state.org = state.orgs.find((o) => o.id === id) || null;
+  if (state.org) state.org = await maybeSwitchToSchool(state.org);
   if (state.org) {
     await window.api.settings.set('lastOrg', state.org.id);
     $('orgSelect').value = state.org.id;
@@ -1031,14 +1104,101 @@ async function openOrgDialog(orgId) {
   $('o_format').value = d.default_format_id;
   $('o_color').value = d.default_color_id;
 
-  // Logo and fonts need a saved organization to attach to.
+  // Fonts need a saved organization to attach to. Logos can be added right away: the organization
+  // is saved first, using what has been typed so far.
   document.querySelector('.assets').hidden = !org;
-  if (org) { renderLogoBox(); renderFontList(); }
+  if (org) renderFontList();
+  $('logoList').innerHTML = '';
+  await loadDialogLogos();
   $('orgDialog').showModal();
 }
 
-function renderLogoBox() {
-  $('logoPreview').innerHTML = state.logoUrl ? `<img src="${state.logoUrl}" alt="Logo">` : 'No logo';
+// ----- logos: several per organization, each with a type, one marked as the main logo -----
+
+const LOGO_ROLES = [['', 'Logo'], ['shield', 'Shield or crest'], ['banner', 'Banner or wordmark (wide)'], ['seal', 'Round seal'], ['icon', 'Small icon'], ['other', 'Other']];
+const logoRoleName = (r) => (LOGO_ROLES.find((x) => x[0] === (r || '')) || LOGO_ROLES[0])[1];
+
+function dialogOrg() { return state.orgs.find((o) => o.id === state.dialogOrgId) || null; }
+
+async function loadDialogLogos() {
+  state.logos = state.dialogOrgId ? await window.api.assets.list(state.dialogOrgId, 'logo') : [];
+  await Promise.all(state.logos.map((l) => assetUrl(l.id)));
+  renderLogoList();
+}
+
+function renderLogoList() {
+  const box = $('logoList');
+  box.innerHTML = '';
+  if (!state.logos.length) {
+    box.innerHTML = '<p class="hint">No logos yet.</p>';
+    return;
+  }
+  const main = dialogOrg() ? dialogOrg().logo_asset_id : null;
+  for (const l of state.logos) {
+    const row = document.createElement('div');
+    row.className = 'logoRow';
+    const url = assetUrlCache.get(l.id);
+    row.innerHTML = `<div class="logoThumb">${url ? `<img src="${url}" alt="">` : ''}</div>` +
+      `<div class="logoMeta"><input type="text" class="lname" value="${esc(l.name)}" title="Name">` +
+      `<select class="lrole">${LOGO_ROLES.map(([v, n]) => `<option value="${v}"${v === (l.role || '') ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></div>` +
+      `<label class="check lmain"><input type="radio" name="mainLogo"${l.id === main ? ' checked' : ''}> Main logo</label>` +
+      '<button type="button" class="btn small danger lrem" title="Remove this logo">Remove</button>';
+    const save = async () => {
+      try { await window.api.assets.update(l.id, { name: row.querySelector('.lname').value, role: row.querySelector('.lrole').value }); }
+      catch (e) { showOrgError(cleanError(e)); }
+    };
+    row.querySelector('.lname').addEventListener('change', save);
+    row.querySelector('.lrole').addEventListener('change', save);
+    row.querySelector('input[type=radio]').addEventListener('change', async () => {
+      const updated = await window.api.orgs.update(state.dialogOrgId, { logo_asset_id: l.id });
+      const i = state.orgs.findIndex((o) => o.id === updated.id);
+      if (i >= 0) state.orgs[i] = updated;
+    });
+    row.querySelector('.lrem').addEventListener('click', async () => {
+      await window.api.assets.delete(l.id);
+      state.orgs = await window.api.orgs.list();
+      await loadDialogLogos();
+    });
+    box.appendChild(row);
+  }
+}
+
+// Save a brand-new organization the moment someone adds a logo, so the logo has somewhere to live.
+async function ensureOrgSaved() {
+  if (state.dialogOrgId) return state.dialogOrgId;
+  if (!$('o_name').value.trim()) {
+    showOrgError('Type the name of your church or school first, then add the logo.');
+    $('o_name').focus();
+    return null;
+  }
+  const org = await window.api.orgs.create(orgFormData());
+  state.dialogOrgId = org.id;
+  await refreshOrgs(org.id);
+  $('orgDialogTitle').textContent = 'Edit your church or school';
+  $('orgDelete').hidden = false;
+  document.querySelector('.assets').hidden = false;
+  renderFontList();
+  return org.id;
+}
+
+async function addLogo() {
+  $('orgError').hidden = true;
+  try {
+    const orgId = await ensureOrgSaved();
+    if (!orgId) return;
+    const asset = await window.api.assets.pick(orgId, 'logo');
+    if (!asset) return;
+    // The first logo added becomes the main one.
+    state.orgs = await window.api.orgs.list();
+    if (!dialogOrg().logo_asset_id) {
+      const updated = await window.api.orgs.update(orgId, { logo_asset_id: asset.id });
+      const i = state.orgs.findIndex((o) => o.id === updated.id);
+      if (i >= 0) state.orgs[i] = updated;
+    }
+    await loadDialogLogos();
+  } catch (e) {
+    showOrgError(cleanError(e));
+  }
 }
 
 function renderFontList() {
@@ -1064,15 +1224,19 @@ function showOrgError(msg) {
   $('orgError').hidden = false;
 }
 
-async function saveOrg(ev) {
-  ev.preventDefault();
-  const data = {
+function orgFormData() {
+  return {
     kind: $('o_kind').value, name: $('o_name').value, tagline: $('o_tagline').value, address: $('o_address').value,
     phone: $('o_phone').value, website: $('o_website').value, email: $('o_email').value,
     primary_color: $('o_primary').value, accent_color: $('o_accent').value,
     heading_font: $('o_headingFont').value, body_font: $('o_bodyFont').value,
     default_format_id: $('o_format').value, default_color_id: $('o_color').value
   };
+}
+
+async function saveOrg(ev) {
+  ev.preventDefault();
+  const data = orgFormData();
   try {
     let id = state.dialogOrgId;
     if (id) await window.api.orgs.update(id, data);
@@ -1088,12 +1252,7 @@ async function pickAsset(kind) {
   try {
     const asset = await window.api.assets.pick(state.org.id, kind);
     if (!asset) return;
-    if (kind === 'logo') {
-      state.org = await window.api.orgs.update(state.org.id, { logo_asset_id: asset.id });
-      state.orgs = await window.api.orgs.list();
-      await loadLogo(state.org);
-      renderLogoBox();
-    } else {
+    {
       await loadOrgFonts(state.org.id);
       const fo = fontOptions();
       const h = $('o_headingFont').value, b = $('o_bodyFont').value;
@@ -1292,16 +1451,8 @@ async function init() {
   $('orgNew').onclick = () => openOrgDialog(null);
   $('orgCancel').onclick = () => $('orgDialog').close();
   $('orgForm').addEventListener('submit', saveOrg);
-  $('logoPick').onclick = () => pickAsset('logo');
+  $('logoAdd').onclick = addLogo;
   $('fontPick').onclick = () => pickAsset('font');
-  $('logoClear').onclick = async () => {
-    if (!state.org.logo_asset_id) return;
-    await window.api.assets.delete(state.org.logo_asset_id);
-    state.org = await window.api.orgs.update(state.org.id, {});
-    state.orgs = await window.api.orgs.list();
-    await loadLogo(state.org);
-    renderLogoBox();
-  };
   $('orgDelete').onclick = async () => {
     const o = state.org;
     if (!o || !confirm(`Delete "${o.name}" with all its templates, logos and fonts? This cannot be undone.`)) return;
@@ -1313,6 +1464,7 @@ async function init() {
   window.addEventListener('resize', () => { if (state.view === 'editor') render(); });
   wireHome();
   wireCover();
+  wireNames();
 
   const last = Number(await window.api.settings.get('lastOrg'));
   await refreshOrgs(last || undefined);

@@ -4,6 +4,19 @@ All notable changes to Program Publisher. Versions follow [Semantic Versioning](
 while the app is below 1.0, new features bump the middle number (0.2.0 → 0.3.0) and fixes bump the last (0.2.0 → 0.2.1).
 The version shows in the app under the title and in the installer file name.
 
+## 0.7.0 — 2026-11-08
+### Added
+- **Logo library** for every church and school: add every version of your logo (shield, banner, seal...), choose the main one, and pick a different one for any cover. Works when setting up a new organization too.
+- **Add a list of names** (graduates, performers, roster, donors): paste from Excel or Word and print in 1–4 columns, with hometown or honors beside each name.
+- Item lines can show composers with dates stacked beside each piece, dotted leaders, and indented sub-lines (movements, texts), matching real concert programs.
+- Cover options: a faint logo watermark, and "presents" and performer lines on the Traditional cover.
+- Graduation wizard asks whether it is a school (diplomas) or a college (degrees).
+- **Project website** (GitHub Pages) with pictures of programs made by the app, plus CONTRIBUTING and issue templates.
+
+### Fixed
+- Existing schools that were created as churches are now detected by name, and you are offered the school program choices instead of weekly services.
+- Cleaner alignment of dotted leaders and keeping headings together with the line after them.
+
 ## 0.6.0 — 2026-11-08
 ### Added
 - **Traditional cover**, modeled on formal concert and commencement programs: your logo and name at the top, a line such as "presents", the title, performers or details, and the place and date at the bottom.

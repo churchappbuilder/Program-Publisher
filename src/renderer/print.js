@@ -5,7 +5,7 @@
 // ready to be saved as PDF.
 (async function () {
   const job = await window.api.print.getJob();
-  const { format, org, content, logoUrl, coverUrl, fonts, mode, paperHex } = job;
+  const { format, org, content, logoUrl, coverUrl, coverLogoUrl, fonts, mode, paperHex } = job;
   const geo = Layout.geometry(format);
 
   // Fonts must be loaded before measuring, or pagination would differ from the preview.
@@ -18,7 +18,7 @@
   }
   await document.fonts.ready;
 
-  const layout = Layout.paginate(document, geo, { org, content, logoUrl, coverUrl });
+  const layout = Layout.paginate(document, geo, { org, content, logoUrl, coverUrl, coverLogoUrl });
 
   const sheets = [];
   let pageW, pageH;

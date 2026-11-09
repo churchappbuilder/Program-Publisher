@@ -119,7 +119,9 @@
       emphasis: v.emphasis === 'title' ? 'title' : 'name', // what stands out most: the church or school name, or the program title
       intro: String(v.intro || ''),   // a short line above the title, such as 'presents'
       middle: String(v.middle || ''), // performers or details under the title (Traditional layout)
-      logoSize: ['small', 'medium', 'large'].includes(v.logoSize) ? v.logoSize : 'large'
+      logoSize: ['small', 'medium', 'large'].includes(v.logoSize) ? v.logoSize : 'large',
+      logoId: v.logoId ? Number(v.logoId) : '', // which of the organization's logos to show ('' = the main logo)
+      watermark: !!v.watermark // show the logo faintly behind the text
     };
   }
 
@@ -178,6 +180,8 @@
     if (/^#\s+/.test(t)) return 'sec';
     if (/^>\s?/.test(t)) return 'rubric';
     if (/^\[notes(?:\s+\d+)?\]$/i.test(t)) return 'notes';
+    if (/^\[columns(?:\s+\d+)?\]$/i.test(t)) return 'cols-open';
+    if (/^\[\/columns\]$/i.test(t)) return 'cols-close';
     if (/^\^\s?/.test(t)) return 'center';
     if (/^[-•]\s+/.test(t)) return 'bullet';
     const body = t.replace(/^\+\s+/, '');
@@ -186,19 +190,19 @@
     return 'text';
   }
 
-  // "+ Label | Middle | Right" -> { stand, label, mid, right }; null if not an item line.
+  // "+ Label | Middle | Right | Note" -> { stand, label, mid, right, note }; null if not an item line.
+  // Note is a small line under the right-hand text (a person's title, an arranger).
   function parseItemLine(raw) {
     if (classifyLine(raw) !== 'item') return null;
     let body = String(raw).trim();
     const stand = /^\+\s+/.test(body);
     body = body.replace(/^\+\s+/, '');
     const parts = body.split('|').map((s) => s.trim());
-    return {
-      stand,
-      label: parts[0],
-      mid: parts.length >= 3 ? parts[1] : '',
-      right: parts.length >= 3 ? parts.slice(2).join(' | ') : parts[1] || ''
-    };
+    const it = { stand, label: parts[0], mid: '', right: '', note: '' };
+    if (parts.length === 2) it.right = parts[1];
+    else if (parts.length === 3) { it.mid = parts[1]; it.right = parts[2]; }
+    else if (parts.length >= 4) { it.mid = parts[1]; it.right = parts[2]; it.note = parts.slice(3).join(' | '); }
+    return it;
   }
 
   function formatItemLine(it) {
@@ -206,11 +210,56 @@
     const label = String(it.label || '').trim();
     const mid = String(it.mid || '').trim();
     const right = String(it.right || '').trim();
+    const note = String(it.note || '').trim();
+    if (note) return `${pre}${label} | ${mid} | ${right} | ${note}`.replace('|  |', '| |');
     if (mid) return `${pre}${label} | ${mid} | ${right}`.trimEnd();
     if (right) return `${pre}${label} | ${right}`;
     return `${pre}${label} |`;
   }
 
+  // "Composer Name (1756–1791)" -> the composer and the dates (only when the brackets hold a year).
+  const YEARS_RE = /^(.*?)\s*\(([^)]*\d{4}[^)]*)\)\s*$/;
+
+  // One line of a program, drawn with dotted leaders to the right-hand text.
+  //   right "Composer (1756–1791)" is stacked: composer, then the dates in small type,
+  //   and in that case the middle text becomes a line under the title (e.g. "from The Phantom").
+  function itemHtml(it, subs) {
+    const m = it.right ? it.right.match(YEARS_RE) : null;
+    const work = !!(m && m[2]);
+    const lines = [];
+    if (it.right) lines.push(work ? m[1] : it.right);
+    if (work) lines.push(`(${m[2]})`);
+    if (it.note) lines.push(it.note);
+    const stacked = lines.length > 1;
+    const midInRow = it.mid && !work;
+    let row = `<div class="item${it.stand ? ' stand' : ''}"><span class="lab">${inline(it.label)}</span>` +
+      (midInRow ? `<span class="mid">${inline(it.mid)}</span>` : '') +
+      (it.right && !midInRow ? '<span class="fill"></span>' : '');
+    if (it.right || it.note) {
+      row += stacked
+        ? `<span class="rt stack">${lines.map((l, i) => `<span class="${i === 0 ? 'r1' : 'r2'}">${inline(l)}</span>`).join('')}</span>`
+        : `<span class="rt">${inline(lines[0] || '')}</span>`;
+    }
+    row += '</div>';
+    const extra = (work && it.mid ? `<div class="worksub">${inline(it.mid)}</div>` : '') +
+      (subs && subs.length ? `<div class="subs">${subs.map((s) => `<div>${inline(s)}</div>`).join('')}</div>` : '');
+    return extra ? `<div class="entry">${row}${extra}</div>` : row;
+  }
+
+  // A block of names (or a roster) printed in columns: [columns 3] ... [/columns].
+  // A line is a name; "Name | Hometown" or a tab adds a small detail; ## starts a group heading.
+  function colsHtml(n, lines) {
+    const out = [];
+    for (const raw of lines) {
+      const s = raw.trim();
+      if (!s) continue;
+      let m;
+      if ((m = s.match(/^#{1,2}\s+(.*)$/))) { out.push(`<div class="csub">${inline(m[1])}</div>`); continue; }
+      const parts = s.split(/\t|\|/).map((p) => p.trim()).filter((p, i) => i === 0 || p);
+      out.push(`<div class="nm"><span class="n1">${inline(parts[0])}</span>` + (parts.length > 1 ? `<span class="n2">${inline(parts.slice(1).join(', '))}</span>` : '') + '</div>');
+    }
+    return `<div class="cols" style="column-count:${n}">${out.join('')}</div>`;
+  }
   function parseBody(text) {
     const src = String(text || '').replace(/\r/g, '').split('\n');
     const blocks = [];
@@ -223,13 +272,38 @@
         para = null;
       }
     };
-    const endAll = () => { endPara(); role = null; };
+    let lastItem = null; // the program line just read, so indented lines beneath it can attach to it
+    let cols = null;     // an open [columns N] block being collected
+    const endAll = () => { endPara(); role = null; lastItem = null; };
+
+    // A long list is cut into pieces that each fit on a page; every piece keeps its own columns.
+    const pushCols = (n, lines) => {
+      const limit = 14 * n;
+      let cur = [];
+      let count = 0;
+      const flush = () => { if (cur.length) { blocks.push({ type: 'cols', html: colsHtml(n, cur) }); cur = []; count = 0; } };
+      for (const l of lines) {
+        if (!l.trim()) continue;
+        if (count >= limit) flush();
+        cur.push(l);
+        if (!/^#{1,2}\s+/.test(l.trim())) count++;
+      }
+      flush();
+    };
 
     for (const raw of src) {
       const t = raw.trim();
+      if (cols) {
+        if (/^\[\/columns\]$/i.test(t)) { pushCols(cols.n, cols.lines); cols = null; } else cols.lines.push(raw);
+        continue;
+      }
       if (!t) { endAll(); continue; }
 
+      // Indented lines right under a program line belong to it (movements, "from ...").
+      if (lastItem && /^\s{2,}\S/.test(raw) && classifyLine(t) === 'text') { lastItem.subs.push(t); continue; }
+
       let m;
+      if ((m = t.match(/^\[columns(?:\s+(\d+))?\]$/i))) { endAll(); cols = { n: Math.max(1, Math.min(4, Number(m[1] || 2))), lines: [] }; continue; }
       if (/^={3,}$/.test(t)) { endAll(); blocks.push({ pageBreak: true }); continue; }
       if ((m = t.match(/^##\s+(.*)$/))) { endAll(); blocks.push({ type: 'sub', keepNext: true, html: `<h4 class="sub">${inline(m[1])}</h4>` }); continue; }
       if ((m = t.match(/^#\s+(.*)$/))) { endAll(); blocks.push({ type: 'sec', keepNext: true, html: `<h3 class="sec">${inline(m[1])}</h3>` }); continue; }
@@ -254,16 +328,9 @@
         blocks.push(role);
       } else if (body.includes('|')) {
         endAll();
-        const parts = body.split('|').map((s) => s.trim());
-        const label = parts[0];
-        const mid = parts.length >= 3 ? parts[1] : '';
-        const right = parts.length >= 3 ? parts.slice(2).join(' | ') : parts[1] || '';
-        blocks.push({
-          type: 'item',
-          html: `<div class="item${stand ? ' stand' : ''}"><span class="lab">${inline(label)}</span>` +
-            (mid ? `<span class="mid">${inline(mid)}</span>` : '') +
-            (right ? `<span class="rt">${inline(right)}</span>` : '') + '</div>'
-        });
+        const block = { type: 'item', item: parseItemLine(raw), subs: [] };
+        blocks.push(block);
+        lastItem = block;
       } else if (role) {
         role.lines.push(body);
       } else if (stand) {
@@ -275,8 +342,15 @@
       }
     }
     endPara();
+    if (cols) pushCols(cols.n, cols.lines); // a [columns] block left open at the end
+
+    // A centered line right under a heading (a dean's name, a presiding officer) stays with that heading.
+    for (let i = 1; i < blocks.length; i++) {
+      if (blocks[i].type === 'center' && blocks[i - 1].keepNext) blocks[i].keepNext = true;
+    }
 
     for (const b of blocks) {
+      if (b.type === 'item') b.html = itemHtml(b.item, b.subs);
       if (b.type === 'role') {
         const bold = BOLD_ROLES.has(b.role.toLowerCase());
         b.html = `<div class="role-row${b.stand ? ' stand' : ''}"><div class="role">${esc(b.role)}</div>` +
@@ -304,8 +378,9 @@
   }
 
   // ----- cover pieces -----
+  const coverLogoImg = (ctx) => { const u = ctx.coverLogoUrl || ctx.logoUrl; return u ? `<img class="logo" src="${u}" alt="">` : ''; };
   const cvName = (ctx, cv) =>
-    (cv.show.logo ? logoImg(ctx) : '') +
+    (cv.show.logo ? coverLogoImg(ctx) : '') +
     (cv.show.name ? `<div class="org">${esc(ctx.org.name)}</div>` : '') +
     (cv.show.tagline && ctx.org.tagline ? `<div class="tagline">${esc(ctx.org.tagline)}</div>` : '');
   const cvTitle = (c) => `<h2>${esc(c.title)}</h2>` + (c.subtitle ? `<div class="subtitle">${esc(c.subtitle)}</div>` : '');
@@ -369,7 +444,9 @@
   // The finished cover page (used by the booklet, and by the cover designer's previews).
   function coverPanel(ctx, content) {
     const b = coverBody(ctx, content);
-    return panel('cover', 'cv ' + b.cls + ' emph-' + content.cover.emphasis + ' logo-' + content.cover.logoSize, b.html, { fit: true });
+    const wmUrl = ctx.coverLogoUrl || ctx.logoUrl;
+    const wm = content.cover.watermark && wmUrl ? `<div class="cv-water"><img src="${wmUrl}" alt=""></div>` : '';
+    return panel('cover', 'cv ' + b.cls + ' emph-' + content.cover.emphasis + ' logo-' + content.cover.logoSize + (wm ? ' cv-wm' : ''), wm + b.html, { fit: true });
   }
 
   function backBlock(ctx) {

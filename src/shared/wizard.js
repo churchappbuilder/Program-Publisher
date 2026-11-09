@@ -80,27 +80,34 @@
         options: [opt('welcome', 'A welcome', true), opt('students', 'Student speakers'), opt('awards', 'Presentation of awards'),
           opt('thanks', 'Thank-yous', true)] },
       { id: 'extras', label: 'What else should be printed?', kind: 'multi', showIf: (a) => a.kind === 'concert',
-        options: [opt('roster', 'Roster of performers'), opt('sponsors', 'Sponsors and donors'), opt('notes', 'Program notes'),
-          opt('upcoming', 'Upcoming events')] },
+        options: [opt('roster', 'Roster of performers, by section'), opt('sponsors', 'Sponsors and donors'), opt('notes', 'Program notes'),
+          opt('etiquette', 'A request to silence phones and not record'), opt('friends', 'A list of friends and donors'), opt('upcoming', 'Upcoming events')] },
 
       // ----- recital -----
       { id: 'recitalExtras', label: 'What else should be printed?', kind: 'multi', showIf: (a) => a.kind === 'recital',
-        options: [opt('welcome', 'A welcome', true), opt('notes', 'Program notes'), opt('roster', 'List of performers'),
-          opt('thanks', 'Thank-yous', true), opt('upcoming', 'Upcoming events')] },
+        options: [opt('guests', 'Accompanist and guest performers', true), opt('numerals', 'Group the pieces with Roman numerals (I, II)'),
+          opt('degree', 'A note that this recital is part of a degree'), opt('studio', 'The teacher or studio'),
+          opt('notes', 'Program notes (with texts and translations)'), opt('roster', 'List of performers'), opt('welcome', 'A welcome'),
+          opt('etiquette', 'A request to silence phones and not record'), opt('friends', 'A list of friends and donors'),
+          opt('upcoming', 'Upcoming events'), opt('thanks', 'Thank-yous', true)] },
 
       // ----- graduation -----
+      { id: 'gradLevel', label: 'What kind of school?', kind: 'single', def: 'highschool', showIf: (a) => a.kind === 'graduation',
+        options: [opt('highschool', 'A school (diplomas)'), opt('college', 'A college or university (degrees)')] },
       { id: 'gradCeremony', label: 'What will the ceremony include?', kind: 'multi', showIf: (a) => a.kind === 'graduation',
-        options: [opt('processional', 'Processional music', true), opt('welcome', 'A welcome', true),
-          opt('invocation', 'An opening prayer or invocation', true), opt('music', 'Choir, band or other music'),
-          opt('studentAddress', 'A student address (valedictorian or salutatorian)', true),
-          opt('keynote', 'A commencement speaker', true), opt('charge', 'A charge to the class'),
-          opt('honors', 'Honors and awards'), opt('scholarships', 'Scholarships'),
+        options: [opt('presiding', 'The presiding officers listed at the top'), opt('processional', 'Processional music', true), opt('anthem', 'The national anthem'),
+          opt('welcome', 'A welcome', true), opt('invocation', 'An opening prayer or invocation', true), opt('music', 'Choir, band or other music'),
+          opt('studentAddress', 'A student address (valedictorian or salutatorian)', true), opt('keynote', 'A commencement speaker', true),
+          opt('charge', 'A charge to the class'), opt('honors', 'Honors and awards'), opt('scholarships', 'Scholarships'),
           opt('tassel', 'Turning of the tassels'), opt('alma', 'A class song or alma mater'),
           opt('benediction', 'A closing prayer or benediction', true), opt('recessional', 'Recessional music', true)] },
       { id: 'gradPrint', label: 'What should be printed in the program?', kind: 'multi', showIf: (a) => a.kind === 'graduation',
         options: [opt('graduates', 'The list of graduates', true), opt('honorGrads', 'Honor graduates (valedictorian, salutatorian)'),
-          opt('awardsList', 'Awards and scholarships and who won them'), opt('faculty', 'Faculty, staff and board'),
-          opt('motto', 'Class motto, colors and flower'), opt('thanks', 'A word of congratulations and thanks', true)] },
+          opt('honorsKey', 'A key to honors markings (summa, magna, cum laude)'), opt('awardsList', 'Awards and scholarships and who won them'),
+          opt('faculty', 'Faculty, staff and board'), opt('motto', 'Class motto, colors and flower'),
+          opt('welcomeNote', 'A welcome message to families'), opt('notices', 'A note for guests (phones, photos, applause)'),
+          opt('hymn', 'The school hymn or song'), opt('baccalaureate', 'A baccalaureate service, printed first'),
+          opt('thanks', 'A word of congratulations and thanks', true)] },
 
       // ----- play or musical -----
       { id: 'playExtras', label: 'What should be printed?', kind: 'multi', showIf: (a) => a.kind === 'play',
@@ -239,9 +246,7 @@
     for (const sec of sections) {
       const items = sec.items.filter(keep);
       if (!items.length && !(sec.raw && sec.raw.length)) continue;
-      outline.push(sec.h);
-      if (out.length) out.push('');
-      out.push('# ' + sec.h);
+      if (sec.h) { outline.push(sec.h); if (out.length) out.push(''); out.push('# ' + sec.h); } else if (out.length) out.push('');
       for (const it of items) {
         let line = it.l;
         if (hymnal) line = line.replace(/\| Number$/, '| ' + hymnal).replace(/\| Numbers$/, '| ' + hymnal.replace(/#$/, '#s'));
@@ -323,10 +328,34 @@
   const GROUPS = { band: 'Concert Band', choir: 'Choir', orchestra: 'Orchestra', jazz: 'Jazz Band', soloists: 'Soloists' };
   const PIECE = 'Piece Title | | Composer Name (1732–1809)';
 
-  // Extra sections printed after the main order (rosters, sponsors, notes…), each as plain text for the person to fill in.
+  // Extra sections printed after the main order (rosters, sponsors, notes…), as plain text to fill in.
+  // A section with no heading (h null) is just lines, such as a page break or a note.
   const rawSection = (h, lines) => ({ h, items: [], raw: lines });
   const SPONSORS = rawSection('Our Sponsors', ['## Gold Level', 'Add sponsor names here.', '', '## Silver Level', 'Add sponsor names here.']);
   const UPCOMING = rawSection('Upcoming Events', ['- Event name, date and time', '- Event name, date and time']);
+  const ETIQUETTE = rawSection(null, ['*Please silence all cell phones and other electronic devices before the performance. Cameras, flash photography and recording devices create distractions and may infringe on copyright law.*']);
+  const FRIENDS = rawSection('Friends and Donors', ['[columns 2]', 'Anonymous', 'Mr. and Mrs. Name', 'Dr. and Mrs. Name', 'Ms. Name', '[/columns]']);
+
+  // Section players for each kind of ensemble, used for rosters.
+  const ROSTER = {
+    band: ['Flute', 'Clarinet', 'Saxophone', 'Trumpet', 'Horn', 'Trombone', 'Euphonium', 'Tuba', 'Percussion'],
+    orchestra: ['Violin I', 'Violin II', 'Viola', 'Cello', 'Bass', 'Flute', 'Oboe', 'Clarinet', 'Bassoon', 'Horn', 'Trumpet', 'Trombone', 'Percussion'],
+    choir: ['Soprano', 'Alto', 'Tenor', 'Bass'],
+    jazz: ['Saxophone', 'Trumpet', 'Trombone', 'Rhythm Section']
+  };
+  const ROSTER_COLS = { band: 3, orchestra: 3, choir: 4, jazz: 3 };
+
+  function rosterLines(groups) {
+    const lines = [];
+    for (const g of groups) {
+      if (!ROSTER[g]) continue;
+      if (lines.length) lines.push('');
+      lines.push('## ' + GROUPS[g], `[columns ${ROSTER_COLS[g]}]`);
+      for (const s of ROSTER[g]) lines.push('## ' + s, 'Name', 'Name');
+      lines.push('[/columns]');
+    }
+    return lines;
+  }
 
   function buildConcert(a) {
     const speak = new Set(a.speaking || []);
@@ -339,10 +368,12 @@
     if (front.length) sections.push({ h: 'Welcome', items: front });
     for (const g of groups) sections.push({ h: GROUPS[g], items: [I(PIECE), I(PIECE), I('Piece Title | arr. Arranger | Composer Name (b. 1978)')] });
     if (speak.has('awards')) sections.push({ h: 'Awards', items: [I('Presentation of Awards |')] });
-    if (extra.has('roster')) sections.push(rawSection('Personnel', groups.map((g) => GROUPS[g]).flatMap((n) => ['', '## ' + n, 'Add the names here, separated by commas.']).slice(1)));
-    if (extra.has('notes')) sections.push(rawSection('Program Notes', ['Add a few sentences about each piece here.']));
+    if (extra.has('roster')) sections.push(rawSection('Personnel', rosterLines(groups)));
+    if (extra.has('notes')) sections.push(rawSection('Program Notes', ['## Piece Title', 'Add a few sentences about the piece here.', '', '## Piece Title', 'Add a few sentences about the piece here.']));
     if (extra.has('sponsors')) sections.push(SPONSORS);
+    if (extra.has('friends')) sections.push(FRIENDS);
     if (extra.has('upcoming')) sections.push(UPCOMING);
+    if (extra.has('etiquette')) sections.push(ETIQUETTE);
     if (speak.has('thanks')) sections.push(rawSection('Thank You', ['Thank you for joining us.']));
     return { name: 'Concert Program', title: 'Spring Concert', subtitle: '', sections, sheetMode: 'concert' };
   }
@@ -351,42 +382,85 @@
     const x = new Set(a.recitalExtras || []);
     const sections = [];
     if (x.has('welcome')) sections.push({ h: 'Welcome', items: [I('Welcome | | Name')] });
-    sections.push({ h: 'Program', items: [I('Piece Title | Performer | Composer Name (1685–1750)'), I('Piece Title | Performer | Composer Name (1770–1827)'),
-      I('Piece Title | Performer | Composer Name (b. 1960)')] });
-    if (x.has('roster')) sections.push(rawSection('Performers', ['Add the performers\' names here, separated by commas.']));
-    if (x.has('notes')) sections.push(rawSection('Program Notes', ['Add a few sentences about each piece here.']));
+    const num = (n) => (x.has('numerals') ? [I(`^ **${n}**`)] : []);
+    const items = [];
+    if (x.has('guests')) items.push(I('^ *Performer Name*, instrument'), I('^ *Accompanist Name*, piano'));
+    items.push(...num('I'),
+      I('Piece Title | from *Source Title* | Composer Name (1756–1791)'), I('  I. First movement'), I('  II. Second movement'),
+      I('Piece Title | | Composer Name (1797–1828)'));
+    if (x.has('guests')) items.push(I('^ *Guest Performer*, instrument'));
+    items.push(...num('II'),
+      I('Piece Title | | Composer Name (1843–1907)'), I('Piece Title | | Composer Name (b. 1960)'));
+    sections.push({ h: 'Program', items });
+    if (x.has('roster')) sections.push(rawSection('Performers', ['[columns 2]', 'Name', 'Name', 'Name', '[/columns]']));
+    if (x.has('degree')) sections.push(rawSection(null, ['^ This recital is presented in partial fulfillment of the requirements for the degree, Bachelor of Music in Instrument or Voice.']));
+    if (x.has('studio')) sections.push(rawSection(null, ['^ From the studio of Teacher Name']));
+    if (x.has('etiquette')) sections.push(ETIQUETTE);
     if (x.has('upcoming')) sections.push(UPCOMING);
+    if (x.has('friends')) sections.push(FRIENDS);
     if (x.has('thanks')) sections.push(rawSection('Thank You', ['Thank you to our teachers, families and friends.']));
-    return { name: 'Recital Program', title: 'Student Recital', subtitle: '', sections, sheetMode: 'concert' };
+    if (x.has('notes')) {
+      sections.push(rawSection(null, ['===']));
+      sections.push(rawSection('Program Notes', ['## Piece Title', 'Add a few sentences about the piece here.', '*Translation or text of the piece, if it has one*', '',
+        '## Piece Title', 'Add a few sentences about the piece here.']));
+    }
+    return { name: 'Recital Program', title: 'Senior Recital', subtitle: 'Performer Name, instrument', sections, sheetMode: 'concert' };
   }
 
-  // A graduation is a ceremony, not a concert: speakers, honors, diplomas and the list of graduates.
+  // A graduation is a ceremony, not a concert: speakers, honors, diplomas or degrees, and the list of graduates.
+  // For a college or university the list is grouped by college and program, with hometowns.
   function buildGraduation(a) {
+    const college = a.gradLevel === 'college';
     const c = new Set(a.gradCeremony || []);
     const p = new Set(a.gradPrint || []);
+    const sections = [];
+
+    if (p.has('welcomeNote')) sections.push(rawSection('Welcome', ['^ The administration, faculty and staff extend a warm welcome to the families and friends of this graduating class.', '', '^ Your support has made this day possible, and we applaud you for investing in the next generation of leaders.']));
+    if (p.has('notices')) sections.push(rawSection(null, ['*Please silence all cell phones and electronic devices. Photography and recording distract others; please hold your applause until all of the names have been read.*']));
+    if (p.has('baccalaureate')) {
+      sections.push({ h: 'Baccalaureate Service', items: [I('Prelude | | Name'), I('+ Processional | | Music'), I('+ Hymn | | Title'), I('+ Invocation | | Name | Title'),
+        I('Special Music | | Performer'), I('Welcome | | Name | Title'), I('Scripture Reading | | Passage'), I('Baccalaureate Sermon | | Speaker | Title'),
+        I('+ Recessional | | Music'), I('+ Benediction | | Name | Title')] });
+      sections.push(rawSection(null, ['===']));
+    }
+
     const items = [];
-    if (c.has('processional')) items.push(I('Processional | | Music'));
-    if (c.has('welcome')) items.push(I('Welcome | | Name'));
-    if (c.has('invocation')) items.push(I('Invocation | | Name'));
+    if (c.has('presiding')) items.push(I('^ Presiding: Name, Title'));
+    if (c.has('processional')) items.push(I('+ Processional | | Music'));
+    if (c.has('anthem')) items.push(I('+ National Anthem | | Performer'));
+    if (c.has('welcome')) items.push(I('Welcome | | Name | Title'));
+    if (c.has('invocation')) items.push(I('Invocation | | Name | Title'));
     if (c.has('music')) items.push(I('Music | | Performer'));
     if (c.has('studentAddress')) items.push(I('Student Address | | Name'));
-    if (c.has('keynote')) items.push(I('Commencement Address | | Speaker'));
-    if (c.has('charge')) items.push(I('Charge to the Class | | Name'));
-    if (c.has('honors')) items.push(I('Presentation of Honors and Awards |'));
-    if (c.has('scholarships')) items.push(I('Presentation of Scholarships |'));
-    items.push(I('Presentation of Diplomas | | Name'));
+    if (c.has('keynote')) items.push(I('Commencement Address | | Name | Title'));
+    if (c.has('charge')) items.push(I('Charge to the Class | | Name | Title'));
+    if (c.has('honors')) items.push(I('Presentation of Honors and Awards | | Name | Title'));
+    if (c.has('scholarships')) items.push(I('Presentation of Scholarships | | Name | Title'));
+    if (college) items.push(I('Presentation of Candidates | | Name | Title'), I('Conferring of Degrees | | Name | Title'));
+    else items.push(I('Presentation of Diplomas | | Name | Title'));
     if (c.has('tassel')) items.push(I('Turning of the Tassels |'));
-    if (c.has('alma')) items.push(I('Class Song or Alma Mater |'));
-    if (c.has('benediction')) items.push(I('Benediction | | Name'));
-    if (c.has('recessional')) items.push(I('Recessional | | Music'));
-    const sections = [{ h: 'Order of Ceremony', items }];
-    if (p.has('graduates')) sections.push({ h: 'The Graduates', items: [I('Graduate Name | | Honors'), I('Graduate Name | | Honors'), I('Graduate Name | | Honors')] });
+    if (c.has('alma')) items.push(I('+ Class Song or Alma Mater |'));
+    if (c.has('benediction')) items.push(I('+ Benediction | | Name | Title'));
+    if (c.has('recessional')) items.push(I('+ Recessional | | Music'));
+    sections.push({ h: college ? 'Commencement Exercises' : 'Order of Ceremony', items });
+
+    if (p.has('graduates')) {
+      const group = ['## College or School Name', '^ Dean Name, Title', '[columns 2]', '## Degree and Major', 'Graduate Name | Hometown, ST', 'Graduate Name | Hometown, ST', 'Graduate Name | Hometown, ST', '[/columns]'];
+      if (college) {
+        sections.push(rawSection('Undergraduate Degree Candidates', group));
+        sections.push(rawSection('Graduate Degree Candidates', group));
+      } else {
+        sections.push(rawSection('The Graduates', ['[columns 3]', 'Graduate Name', 'Graduate Name', 'Graduate Name', 'Graduate Name', 'Graduate Name', 'Graduate Name', '[/columns]']));
+      }
+    }
+    if (p.has('honorsKey')) sections.push(rawSection('Honors', ['* Summa Cum Laude', '† Magna Cum Laude', '‡ Cum Laude']));
     if (p.has('honorGrads')) sections.push({ h: 'Honor Graduates', items: [I('Valedictorian | | Name'), I('Salutatorian | | Name')] });
     if (p.has('awardsList')) sections.push({ h: 'Awards and Scholarships', items: [I('Award Name | | Student Name'), I('Scholarship Name | | Student Name')] });
-    if (p.has('faculty')) sections.push(rawSection('Faculty, Staff and Board', ['## Board of Directors', 'Add the names here, separated by commas.', '', '## Faculty and Staff', 'Add the names here, separated by commas.']));
+    if (p.has('faculty')) sections.push(rawSection('Faculty, Staff and Board', ['## Board of Directors', '[columns 3]', 'Name', 'Name', 'Name', '[/columns]', '## Faculty and Staff', '[columns 3]', 'Name', 'Name', 'Name', '[/columns]']));
     if (p.has('motto')) sections.push({ h: 'Our Class', items: [I('Class Motto | | Words'), I('Class Colors | | Colors'), I('Class Flower | | Flower')] });
+    if (p.has('hymn')) sections.push(rawSection('School Hymn', ['^ First line of the hymn', '^ Second line of the hymn', '^ Third line of the hymn', '^ Fourth line of the hymn']));
     if (p.has('thanks')) sections.push(rawSection('Congratulations', ['Congratulations, graduates! Thank you to the families, teachers and friends who made this day possible.']));
-    return { name: 'Graduation Ceremony', title: 'Commencement', subtitle: 'Class of 2026', sections, sheetMode: 'program' };
+    return { name: 'Graduation Ceremony', title: college ? 'Commencement Exercises' : 'Commencement', subtitle: college ? '' : 'Class of 2026', sections, sheetMode: 'program' };
   }
 
   function buildPlay(a) {
@@ -434,7 +508,7 @@
       // the title and performers in the middle, the place and date at the bottom.
       if (a.kind === 'graduation') return { style: 'traditional', art: none, footer: 'Place of the ceremony' };
       if (a.kind === 'concert') return { style: 'traditional', art: none, intro: 'presents', middle: 'with the\n**Ensemble Name**\nConductor Name, conductor', footer: 'Venue name' };
-      if (a.kind === 'recital') return { style: 'traditional', art: none, intro: 'presents', middle: 'Performer Name, instrument', footer: 'Venue name' };
+      if (a.kind === 'recital') return { style: 'traditional', art: none, intro: 'presents', middle: '', footer: 'Venue name' };
       return { style: 'picture', art: art('star') };
     }
     return { style: 'classic', art: none };

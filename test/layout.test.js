@@ -218,3 +218,67 @@ test('traditional cover: intro line, performers, date and place at the bottom, i
   const small = Layout.coverPanel({ org, content: Layout.normContent({ cover: { logoSize: 'small' } }), logoUrl: 'x' }, Layout.normContent({ cover: { logoSize: 'small' } }));
   assert.ok(small.includes('logo-small'));
 });
+test('program lines: leaders, stacked composer and dates, a title under a name, indented lines', () => {
+  const b = Layout.parseBody([
+    'Overture | from *Carmen* | Georges Bizet (1838–1875)',
+    '  I. Allegro',
+    '  II. Andante',
+    'Invocation | | David Anderson, DMin | President',
+    'Opening Hymn | Holy, Holy, Holy | 77',
+    'Prelude |',
+    'Sermon | | Pastor Smith'
+  ].join('\n'));
+  assert.strictEqual(b.length, 5);
+  assert.ok(b[0].html.startsWith('<div class="entry">'));
+  assert.ok(b[0].html.includes('class="r1">Georges Bizet<') && b[0].html.includes('class="r2">(1838–1875)<'));
+  assert.ok(b[0].html.includes('class="worksub">from <em>Carmen</em>'));               // the middle text moves under the title
+  assert.ok(b[0].html.includes('<div class="subs"><div>I. Allegro</div><div>II. Andante</div></div>'));
+  assert.ok(b[1].html.includes('class="r1">David Anderson, DMin<') && b[1].html.includes('class="r2">President<'));
+  assert.ok(b[1].html.includes('class="fill"'));                                        // dotted leader to the name
+  assert.ok(b[2].html.includes('class="mid"') && !b[2].html.includes('class="fill"')); // a hymn keeps its middle title
+  assert.ok(!b[3].html.includes('class="rt"'));                                         // a bare label has nothing on the right
+  assert.ok(b[4].html.includes('class="fill"') && b[4].html.includes('class="rt">Pastor Smith<'));
+  assert.ok(!b[4].html.includes('stack'));                                              // brackets that are not years do not stack
+  assert.ok(!Layout.parseBody('Psalm | | Psalm 23 (KJV)')[0].html.includes('stack'));
+});
+
+test('program lines: the 4th part round-trips and indented lines only attach to a line above them', () => {
+  const it = Layout.parseItemLine('+ Invocation | | David Anderson | President');
+  assert.deepStrictEqual({ ...it }, { stand: true, label: 'Invocation', mid: '', right: 'David Anderson', note: 'President' });
+  assert.strictEqual(Layout.formatItemLine(it), '+ Invocation | | David Anderson | President');
+  assert.strictEqual(Layout.formatItemLine({ label: 'Sermon', right: 'Pastor' }), 'Sermon | Pastor');
+  // an indented line with nothing above it is just a paragraph
+  const lone = Layout.parseBody('  just text');
+  assert.strictEqual(lone[0].type, 'p');
+  // a blank line ends the attachment
+  const after = Layout.parseBody('Piece | | Composer (1900–1990)\n\n  not attached');
+  assert.ok(!after[0].html.includes('not attached') && after[1].type === 'p');
+});
+
+test('columns blocks: names flow in columns, long lists are cut into pages, details and headings work', () => {
+  const b = Layout.parseBody('[columns 3]\n## Violin I\nAnna Lee | Principal\nBen Cho\n[/columns]\nafter');
+  assert.strictEqual(b[0].type, 'cols');
+  assert.ok(b[0].html.includes('column-count:3') && b[0].html.includes('class="csub">Violin I<') && b[0].html.includes('class="n2">Principal<'));
+  assert.strictEqual(b[1].type, 'p');
+  assert.ok(Layout.parseBody('[columns 2]\nName\tHometown, ST')[0].html.includes('class="n2">Hometown, ST<')); // a tab works like |
+  assert.ok(Layout.parseBody('[columns 9]\nA')[0].html.includes('column-count:4'));                                // limited to 4
+  const many = Layout.parseBody('[columns 2]\n' + Array.from({ length: 100 }, (_, i) => 'Name ' + i).join('\n') + '\n[/columns]');
+  assert.ok(many.length >= 3 && many.every((x) => x.type === 'cols'));                                             // cut into several blocks
+  assert.strictEqual(many.map((x) => (x.html.match(/class="nm"/g) || []).length).reduce((s, n) => s + n, 0), 100); // nobody lost
+  const open = Layout.parseBody('[columns 2]\nA\nB');                                                              // never closed
+  assert.strictEqual(open.length, 1);
+});
+
+test('covers: choose a different logo, faint logo background', () => {
+  const org = { name: 'School', tagline: '', address: '' };
+  const make = (cover, ctx) => { const content = Layout.normContent({ title: 'T', cover }); return Layout.coverPanel({ org, content, logoUrl: 'data:MAIN', ...ctx }, content); };
+  assert.ok(make({}, {}).includes('data:MAIN'));
+  assert.ok(make({ logoId: 5 }, { coverLogoUrl: 'data:SHIELD' }).includes('data:SHIELD'));
+  assert.ok(!make({ logoId: 5 }, { coverLogoUrl: 'data:SHIELD' }).includes('data:MAIN'));
+  assert.ok(make({ logoId: 5 }, {}).includes('data:MAIN'));            // a missing logo falls back to the main one
+  assert.strictEqual(Layout.normCover({ logoId: '7' }).logoId, 7);
+  assert.strictEqual(Layout.normCover({}).logoId, '');
+  assert.ok(make({ watermark: true }, {}).includes('class="cv-water"') && make({ watermark: true }, {}).includes('cv-wm'));
+  assert.ok(!make({}, {}).includes('cv-water'));
+  assert.ok(!make({ watermark: true }, { logoUrl: null }).includes('cv-water')); // nothing to show without a logo
+});

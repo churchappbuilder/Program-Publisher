@@ -71,7 +71,12 @@ async function exportPdf({ templateId, mode, includeColor, filePath }) {
     if (d) logoUrl = `data:${d.mime};base64,${d.base64}`;
   }
   let coverUrl = null;
+  let coverLogoUrl = null;
   const cv = tpl.content && tpl.content.cover;
+  if (cv && cv.logoId) {
+    const d = db.getAssetData(Number(cv.logoId));
+    if (d) coverLogoUrl = `data:${d.mime};base64,${d.base64}`;
+  }
   if (cv && cv.art && cv.art.kind === 'asset' && cv.art.id) {
     const d = db.getAssetData(Number(cv.art.id));
     if (d) coverUrl = `data:${d.mime};base64,${d.base64}`;
@@ -79,7 +84,7 @@ async function exportPdf({ templateId, mode, includeColor, filePath }) {
   const fonts = db.listAssets(org.id, 'font').map((a) => ({ name: a.name, ...db.getAssetData(a.id) }));
 
   const job = {
-    format, org, content: tpl.content, logoUrl, coverUrl, fonts,
+    format, org, content: tpl.content, logoUrl, coverUrl, coverLogoUrl, fonts,
     mode: mode === 'pages' ? 'pages' : 'sheets',
     // Paper color is normally left out: you print on colored stock, you don't print the color.
     paperHex: includeColor && color ? color.hex : '#ffffff'
@@ -148,6 +153,7 @@ function registerIpc() {
   ipcMain.handle('assets:list', (_e, orgId, kind) => db.listAssets(orgId, kind));
   ipcMain.handle('assets:data', (_e, id) => db.getAssetData(id));
   ipcMain.handle('assets:delete', (_e, id) => db.deleteAsset(id));
+  ipcMain.handle('assets:update', (_e, id, data) => db.updateAsset(id, data));
   ipcMain.handle('assets:pick', async (e, orgId, kind) => {
     const exts = kind === 'font' ? FONT_EXT : IMAGE_EXT;
     const win = BrowserWindow.fromWebContents(e.sender);

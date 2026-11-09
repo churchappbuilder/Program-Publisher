@@ -1,7 +1,7 @@
 {
   "name": "program-publisher",
   "productName": "Program Publisher",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Free, offline tool for designing and printing programs and bulletins for churches, schools and events.",
   "main": "src/main/main.js",
   "scripts": {
@@ -27,11 +27,25 @@
     "appId": "org.churchappbuilder.programpublisher",
     "productName": "Program Publisher",
     "copyright": "Copyright © churchappbuilder. Licensed under GPL-3.0-or-later.",
-    "directories": { "output": "dist", "buildResources": "build" },
-    "files": ["src/**/*", "package.json", "LICENSE"],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "LICENSE"
+    ],
     "asar": true,
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "build/icon.ico"
     },
     "nsis": {
