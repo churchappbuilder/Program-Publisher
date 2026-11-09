@@ -7,6 +7,11 @@ accounts, no fees.
 
 > **Status:** early development (v0.1). Windows first; macOS planned.
 
+## Download
+
+**[Download the latest Windows installer](https://github.com/churchappbuilder/Program-Publisher/releases/latest)** (Windows 10 or 11, 64-bit).
+Run it and follow the steps. It installs for your user account and does not need administrator rights.
+Windows may say "Windows protected your PC" because the installer is not code-signed yet. Click **More info**, then **Run anyway**.
 ## Planned features
 - Multiple organizations (a church, a school, a ministry), each with its own logos, fonts and preferences
 - Templates per service type: morning, evening, Wednesday, funeral, wedding and more
