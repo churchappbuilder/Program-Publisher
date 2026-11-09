@@ -4,6 +4,11 @@ All notable changes to Program Publisher. Versions follow [Semantic Versioning](
 while the app is below 1.0, new features bump the middle number (0.2.0 → 0.3.0) and fixes bump the last (0.2.0 → 0.2.1).
 The version shows in the app under the title and in the installer file name.
 
+## 0.9.0 — 2026-11-09
+### Added
+- **Literary night or showcase** program for schools: readings, scenes, poems, Bible verses, speeches and songs, organized by class or teacher. Each section can carry a **teacher's note** (a shaded box, written with `[note Title] ... [/note]`) about the author or the work, such as why Milton or Pilgrim's Progress matters.
+- **One-off moments in a church service:** the wizard can add a baptism, reception of new members, public profession of faith, installation of officers, a public notice of church discipline, or a commissioning, placed right after the sermon.
+
 ## 0.8.0 — 2026-11-09
 ### Added
 - **Design the back page:** choose the name and address, announcements (with the name at the bottom), only your own text, or blank. Choose what shows at the bottom.

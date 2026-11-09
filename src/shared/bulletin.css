@@ -230,3 +230,7 @@ table.grid td:first-child { white-space: nowrap; }
 .cvx.sel { outline: 2px dashed #d4a017; outline-offset: 3px; cursor: move; }
 .cv-editing .cvx { cursor: move; }
 .cvx .org { white-space: normal; }
+.tnote { margin: .6em 0 .7em; padding: .45em .8em .5em; border-left: 3px solid var(--accent); background: rgba(0, 0, 0, .04); }
+.tnote-h { font-family: var(--heading-font); font-style: italic; font-size: .66em; color: var(--primary); margin-bottom: .2em; }
+.tnote p { font-size: .62em; line-height: 1.5; margin: 0 0 .4em; text-align: left; }
+.tnote p:last-child { margin-bottom: 0; }

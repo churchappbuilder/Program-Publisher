@@ -45,6 +45,11 @@
         options: [opt('sermon', 'Sermon or message', true), opt('readings', 'Scripture readings', true),
           opt('responsive', 'A responsive reading (Leader / People)'), opt('creed', 'A creed', true),
           opt('prayers', 'Prayers of the people', true), opt('announce', 'Announcements', true), opt('children', "Children's message")] },
+      { id: 'specials', label: 'Anything special in this service?', kind: 'multi',
+        hint: 'These are added after the sermon. You can move or delete them later.',
+        options: [opt('baptism', 'A baptism'), opt('members', 'Reception of new members'), opt('profession', 'A public profession of faith'),
+          opt('installation', 'Installation or ordination of officers'), opt('discipline', 'A public notice of church discipline'),
+          opt('commission', 'Commissioning or a missionary report')] },
       { id: 'extras', label: 'Printed text', kind: 'multi',
         options: [opt('printText', 'Print the text of the creed and prayers (public-domain wording)', true),
           opt('callScripture', 'Print the Scripture verses for the call to worship'),
@@ -73,7 +78,8 @@
     school: [
       { id: 'kind', label: 'What kind of program?', kind: 'single', def: 'concert',
         options: [opt('concert', 'Concert (band, choir or orchestra)'), opt('recital', 'Recital'), opt('graduation', 'Graduation'),
-          opt('play', 'Play or musical'), opt('awards', 'Awards night')] },
+          opt('play', 'Play or musical'), opt('awards', 'Awards night'),
+          opt('showcase', 'Literary night or showcase (readings, scenes, poems, speeches)')] },
 
       // ----- concert -----
       { id: 'groups', label: 'Who is performing?', kind: 'multi', showIf: (a) => a.kind === 'concert',
@@ -117,6 +123,16 @@
         options: [opt('cast', 'The cast', true), opt('scenes', 'Acts and scenes', true), opt('crew', 'The crew', true),
           opt('director', 'A note from the director'), opt('sponsors', 'Sponsors and donors'), opt('upcoming', 'Upcoming events'),
           opt('thanks', 'Thank-yous', true)] },
+
+      // ----- literary night / showcase -----
+      { id: 'showOrg', label: 'How is the evening organized?', kind: 'single', def: 'byClass', showIf: (a) => a.kind === 'showcase',
+        options: [opt('byClass', 'By class or teacher, each with a note about their section'), opt('single', 'One list, in the order performed')] },
+      { id: 'showItems', label: 'What will students present?', kind: 'multi', showIf: (a) => a.kind === 'showcase',
+        options: [opt('scene', 'Scenes from a book or play', true), opt('poem', 'Poems', true), opt('verse', 'Bible verses or Scripture', true),
+          opt('speech', 'Speeches or orations'), opt('music', 'Songs or music'), opt('project', 'Projects or presentations')] },
+      { id: 'showExtras', label: 'What else should be printed?', kind: 'multi', showIf: (a) => a.kind === 'showcase',
+        options: [opt('welcome', 'A welcome', true), opt('notes', 'A note from each teacher about the author or work', true), opt('thanks', 'Thank-yous', true),
+          opt('sponsors', 'Sponsors and donors'), opt('upcoming', 'Upcoming events'), opt('etiquette', 'A request to silence phones and not record')] },
 
       // ----- awards night -----
       { id: 'awardsExtras', label: 'What should be printed?', kind: 'multi', showIf: (a) => a.kind === 'awards',
@@ -283,6 +299,18 @@
         const at = s.items.findIndex((it) => it.t === 'sermon');
         if (at >= 0) { s.items.splice(at, 0, I('Children\'s Message |')); break; }
       }
+    }
+    // One-off moments in a service, placed right after the sermon.
+    const SPECIALS = { baptism: 'Baptism | | Name', members: 'Reception of New Members |', profession: 'Public Profession of Faith | | Name',
+      installation: 'Installation of Officers |', discipline: 'Public Notice of Church Discipline |', commission: 'Commissioning |' };
+    const extra = (a.specials || []).filter((k) => SPECIALS[k]).map((k) => I(SPECIALS[k]));
+    if (extra.length) {
+      let placed = false;
+      for (const s of sections) {
+        const at = s.items.findIndex((it) => it.t === 'sermon');
+        if (at >= 0) { s.items.splice(at + 1, 0, ...extra); placed = true; break; }
+      }
+      if (!placed && sections.length) sections[sections.length - 1].items.splice(0, 0, ...extra);
     }
     const print = hasAny(a.extras, 'printText');
     const r = render(sections, (it) => !it.t || tags.has(it.t), print, texts, HYMNAL[T]);
@@ -511,8 +539,38 @@
     return { name: 'Awards Program', title: 'Awards Night', subtitle: '', sections, sheetMode: 'program' };
   }
 
+  function buildShowcase(a) {
+    const it = new Set(a.showItems || []);
+    const x = new Set(a.showExtras || []);
+    const piece = [];
+    if (it.has('scene')) piece.push('Scene from "Book or Play Title" | | Student Names');
+    if (it.has('poem')) piece.push('Poem: "Poem Title" | | Student Name');
+    if (it.has('verse')) piece.push('Scripture: Passage | | Student Name');
+    if (it.has('speech')) piece.push('Speech: "Title" | | Student Name');
+    if (it.has('music')) piece.push('Song or Piece | | Student Name');
+    if (it.has('project')) piece.push('Project Title | | Student Name');
+    if (!piece.length) piece.push('Presentation | | Student Name');
+    const sections = [];
+    if (x.has('welcome')) sections.push({ h: 'Welcome', items: [I('Welcome | | Name'), I('Opening Prayer | | Name')] });
+    if (a.showOrg === 'byClass') {
+      for (const cls of ['English Composition', 'Literature']) {
+        const lines = [];
+        if (x.has('notes')) lines.push('[note A note from the teacher: Teacher Name]', 'Tell the audience about the author or work, and what to watch for in this scene.', '', 'A second paragraph is optional.', '[/note]', '');
+        lines.push(...piece);
+        sections.push(rawSection(cls, lines));
+      }
+    } else {
+      sections.push({ h: 'Program', items: piece.map((p) => I(p)) });
+    }
+    if (x.has('etiquette')) sections.push(ETIQUETTE);
+    if (x.has('sponsors')) sections.push(SPONSORS);
+    if (x.has('upcoming')) sections.push(UPCOMING);
+    if (x.has('thanks')) sections.push(rawSection('Thank You', ['Thank you to our teachers, students and families.']));
+    return { name: 'Literary Night', title: 'Literary Night', subtitle: 'An evening of readings, scenes and recitations', sections, sheetMode: 'program' };
+  }
+
   function buildSchool(a) {
-    const b = a.kind === 'recital' ? buildRecital(a) : a.kind === 'graduation' ? buildGraduation(a)
+    const b = a.kind === 'showcase' ? buildShowcase(a) : a.kind === 'recital' ? buildRecital(a) : a.kind === 'graduation' ? buildGraduation(a)
       : a.kind === 'play' ? buildPlay(a) : a.kind === 'awards' ? buildAwards(a) : buildConcert(a);
     const r = render(b.sections, () => true, false, null);
     return { name: b.name, title: b.title, subtitle: b.subtitle, body: r.body, sheetMode: b.sheetMode, outline: r.outline };
@@ -530,6 +588,7 @@
       if (a.kind === 'graduation') return { style: 'traditional', art: none, footer: 'Place of the ceremony' };
       if (a.kind === 'concert') return { style: 'traditional', art: none, intro: 'presents', middle: 'with the\n**Ensemble Name**\nConductor Name, conductor', footer: 'Venue name' };
       if (a.kind === 'recital') return { style: 'traditional', art: none, intro: 'presents', middle: '', footer: 'Venue name' };
+      if (a.kind === 'showcase') return { style: 'picture', art: art('book') };
       return { style: 'picture', art: art('star') };
     }
     return { style: 'classic', art: none };

@@ -229,8 +229,8 @@
     if (/^#\s+/.test(t)) return 'sec';
     if (/^>\s?/.test(t)) return 'rubric';
     if (/^\[notes(?:\s+\d+)?\]$/i.test(t)) return 'notes';
-    if (/^\[(?:columns|table|scripture)\b[^\]]*\]$/i.test(t)) return 'cols-open'; // a block that runs until its closing tag
-    if (/^\[\/(?:columns|table|scripture)\]$/i.test(t)) return 'cols-close';
+    if (/^\[(?:columns|table|scripture|note)(?:\s[^\]]*)?\]$/i.test(t)) return 'cols-open'; // a block that runs until its closing tag
+    if (/^\[\/(?:columns|table|scripture|note)\]$/i.test(t)) return 'cols-close';
     if (/^\^\s?/.test(t)) return 'center';
     if (/^[-•]\s+/.test(t)) return 'bullet';
     const body = t.replace(/^\+\s+/, '');
@@ -384,6 +384,12 @@
         for (let i = 0; i < cols.lines.length; i += 16) blocks.push({ type: 'table', html: tableHtml(cols.header, cols.lines.slice(i, i + 16)) });
       } else if (cols.kind === 'scripture') {
         blocks.push(...scriptureBlocks(cols.ref, cols.lines));
+      } else if (cols.kind === 'note') {
+        // A teacher's or director's note: a titled box of prose, kept together with what follows its heading.
+        const paras = cols.lines.join('\n').split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+        if (paras.length || cols.ref) {
+          blocks.push({ type: 'note', html: `<div class="tnote">${cols.ref ? `<div class="tnote-h">${inline(cols.ref)}</div>` : ''}${paras.map((p) => `<p>${p.split('\n').map(inline).join('<br>')}</p>`).join('')}</div>` });
+        }
       } else pushCols(cols.n, cols.lines);
       cols = null;
     };
@@ -402,6 +408,7 @@
       let m;
       if ((m = t.match(/^\[columns(?:\s+(\d+))?\]$/i))) { endAll(); cols = { kind: 'columns', n: Math.max(1, Math.min(4, Number(m[1] || 2))), lines: [] }; continue; }
       if ((m = t.match(/^\[table(\s+header)?\]$/i))) { endAll(); cols = { kind: 'table', header: !!m[1], lines: [] }; continue; }
+      if ((m = t.match(/^\[note(?:\s+(.*))?\]$/i))) { endAll(); cols = { kind: 'note', ref: (m[1] || '').trim(), lines: [] }; continue; }
       if ((m = t.match(/^\[scripture(?:\s+(.*))?\]$/i))) { endAll(); cols = { kind: 'scripture', ref: (m[1] || '').trim(), lines: [] }; continue; }
       if (/^={3,}$/.test(t)) { endAll(); blocks.push({ pageBreak: true }); continue; }
       if ((m = t.match(/^##\s+(.*)$/))) { endAll(); blocks.push({ type: 'sub', keepNext: true, html: `<h4 class="sub">${inline(m[1])}</h4>` }); continue; }

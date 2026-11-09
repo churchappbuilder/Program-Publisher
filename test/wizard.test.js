@@ -249,3 +249,17 @@ test('church wizard can print Bible passages and put announcements on the back',
   const plain = Wizard.build('church', { tradition: 'presbyterian' }, {});
   assert.ok(!plain.body.includes('[scripture') && !plain.back);
 });
+
+test('showcase (literary night) has teacher notes per class; church services can add one-offs', () => {
+  const r = Wizard.build('school', { kind: 'showcase' }, {});
+  assert.ok(r.body.includes('[note A note from the teacher') && r.body.includes('[/note]'));
+  assert.ok(r.body.includes('# English Composition') && r.body.includes('Poem:'));
+  assert.ok(Layout.parseBody(r.body).some((b) => b.type === 'note'), 'the note prints as a box');
+  const single = Wizard.build('school', { kind: 'showcase', showOrg: 'single', showExtras: [] }, {});
+  assert.ok(!single.body.includes('[note') && single.body.includes('# Program'));
+  const c = Wizard.build('church', { tradition: 'presbyterian', specials: ['baptism', 'members', 'discipline'] }, {});
+  const lines = c.body.split('\n');
+  const at = lines.findIndex((l) => /^Baptism \|/.test(l));
+  assert.ok(at > 0 && /^Reception of New Members/.test(lines[at + 1]) && /^Public Notice of Church Discipline/.test(lines[at + 2]));
+  assert.ok(lines.findIndex((l) => /^Sermon/.test(l)) < at, 'placed after the sermon');
+});
