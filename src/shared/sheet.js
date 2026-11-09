@@ -17,6 +17,11 @@
       columns: ['Item', 'Detail (hymn title…)', 'Right side (number, reading, name)'],
       stand: true
     },
+    program: {
+      name: 'School program (graduation, play, awards)',
+      columns: ['Item', 'Detail', 'Name or details'],
+      stand: false
+    },
     concert: {
       name: 'Concert program',
       columns: ['Piece', 'Note (arranger, work…)', 'Composer', 'Years (1732–1809)'],

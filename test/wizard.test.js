@@ -17,7 +17,7 @@ test('every type builds with defaults and parses into a non-empty bulletin', () 
     const r = Wizard.build(t.id, {}, texts);
     assert.ok(r.name && r.title !== undefined && r.body.trim(), t.id);
     assert.ok(Layout.parseBody(r.body).length > 0, t.id);
-    assert.ok(['service', 'concert'].includes(r.sheetMode), t.id);
+    assert.ok(['service', 'concert', 'program'].includes(r.sheetMode), t.id);
     assert.deepStrictEqual(headings(r.body), r.outline.filter((h) => r.body.includes('# ' + h)), t.id);
   }
 });
@@ -170,7 +170,44 @@ test('every program type suggests a cover that uses real artwork and layouts', (
     assert.ok(Layout.COVER_STYLES.some((s) => s.id === r.cover.style), t.id);
     if (r.cover.art.kind === 'builtin') assert.ok(Artwork.svg(r.cover.art.id), t.id + ' art exists');
   }
-  assert.strictEqual(Wizard.build('school', { kind: 'graduation' }).cover.style, 'banner');
-  assert.strictEqual(Wizard.build('school', { kind: 'concert' }).cover.art.id, 'notes');
+  assert.strictEqual(Wizard.build('school', { kind: 'graduation' }).cover.style, 'traditional');
+  assert.strictEqual(Wizard.build('school', { kind: 'play' }).cover.art.id, 'star');
   assert.strictEqual(Wizard.build('church', {}, texts).cover.style, 'classic');
+});
+
+test('a graduation is tailored to a graduation, not a concert', () => {
+  const visible = (kind) => Wizard.QUESTIONS.school.filter((q) => !q.showIf || q.showIf({ kind })).map((q) => q.id);
+  assert.deepStrictEqual(visible('graduation'), ['kind', 'gradCeremony', 'gradPrint']);
+  assert.deepStrictEqual(visible('concert'), ['kind', 'groups', 'speaking', 'extras']);
+  assert.deepStrictEqual(visible('play'), ['kind', 'playExtras']);
+  // none of the concert-only choices are offered for a graduation
+  const gradOptions = Wizard.QUESTIONS.school.filter((q) => q.showIf && q.showIf({ kind: 'graduation' })).flatMap((q) => q.options.map((o) => o.label.toLowerCase()));
+  for (const concertOnly of ['roster of performers', 'program notes', 'concert band', 'jazz band', 'orchestra']) {
+    assert.ok(!gradOptions.some((l) => l.includes(concertOnly)), concertOnly);
+  }
+  assert.ok(gradOptions.some((l) => l.includes('diploma') || l.includes('graduates')));
+
+  const g = Wizard.build('school', { kind: 'graduation' }).body;
+  for (const must of ['# Order of Ceremony', 'Processional', 'Commencement Address', 'Presentation of Diplomas', 'Benediction', 'Recessional', '# The Graduates']) assert.ok(g.includes(must), must);
+  for (const never of ['Personnel', 'Program Notes', 'Concert Band', 'Choir', 'Piece Title', 'Composer']) assert.ok(!g.includes(never), never);
+
+  // choices change the result
+  const all = Wizard.build('school', { kind: 'graduation', gradCeremony: ['processional', 'welcome', 'invocation', 'music', 'studentAddress', 'keynote', 'charge', 'honors', 'scholarships', 'tassel', 'alma', 'benediction', 'recessional'], gradPrint: ['graduates', 'honorGrads', 'awardsList', 'faculty', 'motto', 'thanks'] }).body;
+  for (const must of ['Charge to the Class', 'Presentation of Scholarships', 'Turning of the Tassels', 'Class Song or Alma Mater', '# Honor Graduates', '# Awards and Scholarships', '# Faculty, Staff and Board', '# Our Class', '# Congratulations']) assert.ok(all.includes(must), must);
+  const min = Wizard.build('school', { kind: 'graduation', gradCeremony: [], gradPrint: [] }).body;
+  assert.ok(min.includes('Presentation of Diplomas') && !min.includes('Processional') && !min.includes('The Graduates'));
+  assert.strictEqual(Wizard.build('school', { kind: 'graduation' }).sheetMode, 'program');
+});
+
+test('concerts, recitals, plays and awards each have their own sections and covers', () => {
+  const b = (a) => Wizard.build('school', a);
+  assert.ok(b({ kind: 'concert' }).body.includes('# Concert Band'));
+  assert.ok(b({ kind: 'recital', recitalExtras: ['notes', 'roster'] }).body.includes('# Performers'));
+  assert.ok(b({ kind: 'play', playExtras: ['cast', 'director'] }).body.includes('# A Note from the Director'));
+  assert.ok(!b({ kind: 'play', playExtras: ['cast'] }).body.includes('# Crew'));
+  assert.ok(b({ kind: 'awards', awardsExtras: ['winners', 'sponsors'] }).body.includes('# Our Sponsors'));
+  assert.ok(!b({ kind: 'awards', awardsExtras: [] }).body.includes('Award Winners'));
+  // formal Traditional covers for concerts, recitals and graduations
+  for (const kind of ['concert', 'recital', 'graduation']) assert.strictEqual(b({ kind }).cover.style, 'traditional', kind);
+  assert.strictEqual(b({ kind: 'concert' }).cover.intro, 'presents');
 });

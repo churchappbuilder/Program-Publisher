@@ -4,6 +4,16 @@ All notable changes to Program Publisher. Versions follow [Semantic Versioning](
 while the app is below 1.0, new features bump the middle number (0.2.0 → 0.3.0) and fixes bump the last (0.2.0 → 0.2.1).
 The version shows in the app under the title and in the installer file name.
 
+## 0.6.0 — 2026-11-08
+### Added
+- **Traditional cover**, modeled on formal concert and commencement programs: your logo and name at the top, a line such as "presents", the title, performers or details, and the place and date at the bottom.
+- **Logo size** (small, medium, large) on every cover. The logo is large by default, since it is one of the most prominent things on a cover.
+- Graduations now ask graduation questions: processional music, speakers, honors, diplomas, the list of graduates, faculty and board, class motto, and more. Concerts, recitals, plays and awards nights each have their own questions and sections too.
+- New "School program" fill-in sheet columns (Item, Detail, Name or details) for graduations, plays and awards.
+
+### Changed
+- Schools no longer see weekly worship services. A new school starts with an empty list, the New menu lists only school programs, and the wording is "The program" and "Fill in the program". "Copy for next week" is hidden for schools.
+- New concerts, recitals and graduations start with the Traditional cover.
 ## 0.5.0 — 2026-11-08
 ### Added
 - **Cover designer** ("Design the cover…"): six layouts drawn from real church and school covers (Classic; Name on top, details below; Picture feature; Full-page picture; Color banner; Framed), with a live preview and a choice of what stands out most, the name or the title.

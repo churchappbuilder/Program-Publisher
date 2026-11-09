@@ -32,7 +32,7 @@ Windows may say "Windows protected your PC" because the installer is not code-si
 - [x] Start screen (new program, recent, church and school templates) and a New program wizard
 - [x] Worship styles in the wizard: Presbyterian, Anglican, Lutheran (ELCA and LCMS), Methodist, contemporary, simple (Catholic and Orthodox are not planned for now)
 - [ ] Seasons of the church year and lectionary readings
-- [x] School programs: concert, recital, graduation, play, awards night
+- [x] School programs: concert, recital, graduation, play and awards night, each with its own questions and sections
 - [x] Cover designer: six layouts, your own pictures or built-in seasonal art
 - [ ] Windows installer built automatically on GitHub
 - [ ] Bleed and crop marks for print shops

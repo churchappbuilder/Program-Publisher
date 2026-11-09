@@ -150,7 +150,7 @@ test('built-in texts all parse and have names and sources', () => {
   assert.ok(BUILTIN_TEXTS.some((t) => /Nicene/.test(t.name)));
 });
 
-test('covers: normalizing, defaults, and all six layouts render with every option', () => {
+test('covers: normalizing, defaults, and all seven layouts render with every option', () => {
   const c = Layout.normCover(undefined);
   assert.strictEqual(c.style, 'classic');
   assert.strictEqual(c.emphasis, 'name');
@@ -159,7 +159,11 @@ test('covers: normalizing, defaults, and all six layouts render with every optio
   assert.strictEqual(Layout.normCover({ style: 'nonsense' }).style, 'classic');
   assert.strictEqual(Layout.normCover({ emphasis: 'title' }).emphasis, 'title');
   assert.strictEqual(Layout.normCover({ art: { kind: 'bad' } }).art.kind, 'none');
-  assert.strictEqual(Layout.COVER_STYLES.length, 6);
+  assert.strictEqual(Layout.COVER_STYLES.length, 7);
+  assert.strictEqual(c.logoSize, 'large');
+  assert.strictEqual(c.intro, '');
+  assert.strictEqual(c.middle, '');
+  assert.strictEqual(Layout.normCover({ logoSize: 'huge' }).logoSize, 'large');
 
   const org = { name: 'Grace <Church>', tagline: 'A place', address: '1 Main St', phone: '555', website: 'x.org', email: '' };
   for (const style of Layout.COVER_STYLES.map((s) => s.id)) {
@@ -196,4 +200,21 @@ test('covers: the cover shows up on the cover page of a booklet, and is not used
   const content = Layout.normContent({ title: 'T', cover: { style: 'banner' } });
   assert.strictEqual(content.cover.style, 'banner');
   assert.strictEqual(Layout.normContent({ title: 'T', plain: true }).plain, true);
+});
+
+test('traditional cover: intro line, performers, date and place at the bottom, in order', () => {
+  const org = { name: 'Heritage University', tagline: 'Division of Music', address: '', phone: '', website: '', email: '' };
+  const content = Layout.normContent({ title: 'Concerto Showcase', subtitle: 'Class of 2026', date: 'Thursday, October 15, 2026', cover: {
+    style: 'traditional', intro: 'presents', middle: 'with the\n**UNIVERSITY ORCHESTRA**\n\nMichael Moore, director', footer: 'Rodeheaver Auditorium' } });
+  const html = Layout.coverPanel({ org, content, logoUrl: 'data:image/png;base64,LOGO' }, content);
+  assert.ok(html.includes('cv-traditional') && html.includes('logo-large'));
+  const at = (s) => html.indexOf(s);
+  // top: logo, name, division, presents. middle: title, subtitle, performers. bottom: place, then date.
+  assert.ok(at('class="logo"') < at('Heritage University') && at('Heritage University') < at('Division of Music') && at('Division of Music') < at('presents'));
+  assert.ok(at('presents') < at('Concerto Showcase') && at('Concerto Showcase') < at('Class of 2026') && at('Class of 2026') < at('UNIVERSITY ORCHESTRA'));
+  assert.ok(at('UNIVERSITY ORCHESTRA') < at('Michael Moore, director'));
+  assert.ok(at('Michael Moore, director') < at('Rodeheaver Auditorium') && at('Rodeheaver Auditorium') < at('Thursday, October 15, 2026'));
+  assert.ok(html.includes('<strong>UNIVERSITY ORCHESTRA</strong>') && html.includes('class="gap"'));
+  const small = Layout.coverPanel({ org, content: Layout.normContent({ cover: { logoSize: 'small' } }), logoUrl: 'x' }, Layout.normContent({ cover: { logoSize: 'small' } }));
+  assert.ok(small.includes('logo-small'));
 });

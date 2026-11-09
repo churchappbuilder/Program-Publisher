@@ -36,6 +36,9 @@ function createWindow() {
 }
 
 function starterTemplates(orgId, org) {
+  // Only churches start with weekly services. A school's programs are one-offs, so it starts empty
+  // and picks from the start screen's School templates.
+  if (org.kind === 'school' || org.kind === 'other') return;
   for (const id of ['morning', 'evening']) {
     const s = SERVICE_TYPES.find((x) => x.id === id);
     db.createTemplate(orgId, {

@@ -71,15 +71,47 @@
       { id: 'kind', label: 'What kind of program?', kind: 'single', def: 'concert',
         options: [opt('concert', 'Concert (band, choir or orchestra)'), opt('recital', 'Recital'), opt('graduation', 'Graduation'),
           opt('play', 'Play or musical'), opt('awards', 'Awards night')] },
+
+      // ----- concert -----
       { id: 'groups', label: 'Who is performing?', kind: 'multi', showIf: (a) => a.kind === 'concert',
         options: [opt('band', 'Concert band', true), opt('choir', 'Choir', true), opt('orchestra', 'Orchestra'),
           opt('jazz', 'Jazz band'), opt('soloists', 'Soloists')] },
-      { id: 'speaking', label: 'What speaking will there be?', kind: 'multi',
+      { id: 'speaking', label: 'What speaking will there be?', kind: 'multi', showIf: (a) => a.kind === 'concert',
         options: [opt('welcome', 'A welcome', true), opt('students', 'Student speakers'), opt('awards', 'Presentation of awards'),
           opt('thanks', 'Thank-yous', true)] },
-      { id: 'extras', label: 'What else should be printed?', kind: 'multi',
+      { id: 'extras', label: 'What else should be printed?', kind: 'multi', showIf: (a) => a.kind === 'concert',
         options: [opt('roster', 'Roster of performers'), opt('sponsors', 'Sponsors and donors'), opt('notes', 'Program notes'),
-          opt('upcoming', 'Upcoming events')] }
+          opt('upcoming', 'Upcoming events')] },
+
+      // ----- recital -----
+      { id: 'recitalExtras', label: 'What else should be printed?', kind: 'multi', showIf: (a) => a.kind === 'recital',
+        options: [opt('welcome', 'A welcome', true), opt('notes', 'Program notes'), opt('roster', 'List of performers'),
+          opt('thanks', 'Thank-yous', true), opt('upcoming', 'Upcoming events')] },
+
+      // ----- graduation -----
+      { id: 'gradCeremony', label: 'What will the ceremony include?', kind: 'multi', showIf: (a) => a.kind === 'graduation',
+        options: [opt('processional', 'Processional music', true), opt('welcome', 'A welcome', true),
+          opt('invocation', 'An opening prayer or invocation', true), opt('music', 'Choir, band or other music'),
+          opt('studentAddress', 'A student address (valedictorian or salutatorian)', true),
+          opt('keynote', 'A commencement speaker', true), opt('charge', 'A charge to the class'),
+          opt('honors', 'Honors and awards'), opt('scholarships', 'Scholarships'),
+          opt('tassel', 'Turning of the tassels'), opt('alma', 'A class song or alma mater'),
+          opt('benediction', 'A closing prayer or benediction', true), opt('recessional', 'Recessional music', true)] },
+      { id: 'gradPrint', label: 'What should be printed in the program?', kind: 'multi', showIf: (a) => a.kind === 'graduation',
+        options: [opt('graduates', 'The list of graduates', true), opt('honorGrads', 'Honor graduates (valedictorian, salutatorian)'),
+          opt('awardsList', 'Awards and scholarships and who won them'), opt('faculty', 'Faculty, staff and board'),
+          opt('motto', 'Class motto, colors and flower'), opt('thanks', 'A word of congratulations and thanks', true)] },
+
+      // ----- play or musical -----
+      { id: 'playExtras', label: 'What should be printed?', kind: 'multi', showIf: (a) => a.kind === 'play',
+        options: [opt('cast', 'The cast', true), opt('scenes', 'Acts and scenes', true), opt('crew', 'The crew', true),
+          opt('director', 'A note from the director'), opt('sponsors', 'Sponsors and donors'), opt('upcoming', 'Upcoming events'),
+          opt('thanks', 'Thank-yous', true)] },
+
+      // ----- awards night -----
+      { id: 'awardsExtras', label: 'What should be printed?', kind: 'multi', showIf: (a) => a.kind === 'awards',
+        options: [opt('welcome', 'A welcome', true), opt('students', 'Student remarks'), opt('winners', 'The list of award winners', true),
+          opt('sponsors', 'Sponsors and donors'), opt('thanks', 'Thank-yous', true)] }
     ],
     other: []
   };
@@ -291,65 +323,104 @@
   const GROUPS = { band: 'Concert Band', choir: 'Choir', orchestra: 'Orchestra', jazz: 'Jazz Band', soloists: 'Soloists' };
   const PIECE = 'Piece Title | | Composer Name (1732–1809)';
 
-  function buildSchool(a) {
+  // Extra sections printed after the main order (rosters, sponsors, notes…), each as plain text for the person to fill in.
+  const rawSection = (h, lines) => ({ h, items: [], raw: lines });
+  const SPONSORS = rawSection('Our Sponsors', ['## Gold Level', 'Add sponsor names here.', '', '## Silver Level', 'Add sponsor names here.']);
+  const UPCOMING = rawSection('Upcoming Events', ['- Event name, date and time', '- Event name, date and time']);
+
+  function buildConcert(a) {
     const speak = new Set(a.speaking || []);
     const extra = new Set(a.extras || []);
     const groups = (a.groups && a.groups.length ? a.groups : ['band']).filter((g) => GROUPS[g]);
     const sections = [];
-    let title = 'Spring Concert', subtitle = '', name = 'Concert Program', sheetMode = 'concert';
-
     const front = [];
     if (speak.has('welcome')) front.push(I('Welcome | | Name'));
     if (speak.has('students')) front.push(I('Student Remarks | | Name'));
+    if (front.length) sections.push({ h: 'Welcome', items: front });
+    for (const g of groups) sections.push({ h: GROUPS[g], items: [I(PIECE), I(PIECE), I('Piece Title | arr. Arranger | Composer Name (b. 1978)')] });
+    if (speak.has('awards')) sections.push({ h: 'Awards', items: [I('Presentation of Awards |')] });
+    if (extra.has('roster')) sections.push(rawSection('Personnel', groups.map((g) => GROUPS[g]).flatMap((n) => ['', '## ' + n, 'Add the names here, separated by commas.']).slice(1)));
+    if (extra.has('notes')) sections.push(rawSection('Program Notes', ['Add a few sentences about each piece here.']));
+    if (extra.has('sponsors')) sections.push(SPONSORS);
+    if (extra.has('upcoming')) sections.push(UPCOMING);
+    if (speak.has('thanks')) sections.push(rawSection('Thank You', ['Thank you for joining us.']));
+    return { name: 'Concert Program', title: 'Spring Concert', subtitle: '', sections, sheetMode: 'concert' };
+  }
 
-    if (a.kind === 'concert') {
-      if (front.length) sections.push({ h: 'Welcome', items: front });
-      for (const g of groups) sections.push({ h: GROUPS[g], items: [I(PIECE), I(PIECE), I('Piece Title | arr. Arranger | Composer Name (b. 1978)')] });
-      if (speak.has('awards')) sections.push({ h: 'Awards', items: [I('Presentation of Awards |')] });
-    } else if (a.kind === 'recital') {
-      name = 'Recital Program'; title = 'Student Recital';
-      if (front.length) sections.push({ h: 'Welcome', items: front });
-      sections.push({ h: 'Program', items: [I('Piece Title | Performer | Composer Name (1685–1750)'), I('Piece Title | Performer | Composer Name (1770–1827)'),
-        I('Piece Title | Performer | Composer Name (b. 1960)')] });
-      if (speak.has('awards')) sections.push({ h: 'Awards', items: [I('Presentation of Awards |')] });
-    } else if (a.kind === 'graduation') {
-      name = 'Graduation Ceremony'; title = 'Commencement'; subtitle = 'Class of 2026'; sheetMode = 'service';
-      const items = [I('Processional |')];
-      if (speak.has('welcome')) items.push(I('Welcome | | Name'));
-      items.push(I('Invocation | | Name'));
-      if (speak.has('students')) items.push(I('Student Address | | Name'));
-      items.push(I('Keynote Address | | Name'), I('Presentation of Diplomas | | Name'));
-      if (speak.has('awards')) items.push(I('Presentation of Awards |'));
-      items.push(I('Alma Mater |'), I('Benediction | | Name'), I('Recessional |'));
-      sections.push({ h: 'Ceremony', items });
-      sections.push({ h: 'Graduates', items: [], raw: ['Add the graduates\' names here, one per line.'] });
-    } else if (a.kind === 'play') {
-      name = 'Play Program'; title = 'The School Play'; sheetMode = 'service';
-      sections.push({ h: 'Cast', items: [I('Character | | Student Name'), I('Character | | Student Name'), I('Character | | Student Name')] });
-      sections.push({ h: 'Scenes', items: [I('Act I | | Setting'), I('Act II | | Setting')] });
-      sections.push({ h: 'Crew', items: [I('Director | | Name'), I('Stage Manager | | Name')] });
-    } else {
-      name = 'Awards Program'; title = 'Awards Night'; sheetMode = 'service';
-      const items = [];
-      if (speak.has('welcome')) items.push(I('Welcome | | Name'));
-      items.push(I('Presentation of Awards |'));
-      if (speak.has('students')) items.push(I('Student Remarks | | Name'));
-      items.push(I('Closing Remarks | | Name'));
-      sections.push({ h: 'Program', items });
-      sections.push({ h: 'Award Winners', items: [I('Award Name | | Student Name'), I('Award Name | | Student Name')] });
-    }
+  function buildRecital(a) {
+    const x = new Set(a.recitalExtras || []);
+    const sections = [];
+    if (x.has('welcome')) sections.push({ h: 'Welcome', items: [I('Welcome | | Name')] });
+    sections.push({ h: 'Program', items: [I('Piece Title | Performer | Composer Name (1685–1750)'), I('Piece Title | Performer | Composer Name (1770–1827)'),
+      I('Piece Title | Performer | Composer Name (b. 1960)')] });
+    if (x.has('roster')) sections.push(rawSection('Performers', ['Add the performers\' names here, separated by commas.']));
+    if (x.has('notes')) sections.push(rawSection('Program Notes', ['Add a few sentences about each piece here.']));
+    if (x.has('upcoming')) sections.push(UPCOMING);
+    if (x.has('thanks')) sections.push(rawSection('Thank You', ['Thank you to our teachers, families and friends.']));
+    return { name: 'Recital Program', title: 'Student Recital', subtitle: '', sections, sheetMode: 'concert' };
+  }
 
-    if (extra.has('roster')) {
-      const names = a.kind === 'concert' ? groups.map((g) => GROUPS[g]) : ['Performers'];
-      sections.push({ h: 'Personnel', items: [], raw: names.flatMap((n) => ['', '## ' + n, 'Add the names here, separated by commas.']).slice(1) });
-    }
-    if (extra.has('notes')) sections.push({ h: 'Program Notes', items: [], raw: ['Add a few sentences about each piece here.'] });
-    if (extra.has('sponsors')) sections.push({ h: 'Our Sponsors', items: [], raw: ['## Gold Level', 'Add sponsor names here.', '', '## Silver Level', 'Add sponsor names here.'] });
-    if (extra.has('upcoming')) sections.push({ h: 'Upcoming Events', items: [], raw: ['- Event name, date and time', '- Event name, date and time'] });
-    if (speak.has('thanks')) sections.push({ h: 'Thank You', items: [], raw: ['Thank you for joining us.'] });
+  // A graduation is a ceremony, not a concert: speakers, honors, diplomas and the list of graduates.
+  function buildGraduation(a) {
+    const c = new Set(a.gradCeremony || []);
+    const p = new Set(a.gradPrint || []);
+    const items = [];
+    if (c.has('processional')) items.push(I('Processional | | Music'));
+    if (c.has('welcome')) items.push(I('Welcome | | Name'));
+    if (c.has('invocation')) items.push(I('Invocation | | Name'));
+    if (c.has('music')) items.push(I('Music | | Performer'));
+    if (c.has('studentAddress')) items.push(I('Student Address | | Name'));
+    if (c.has('keynote')) items.push(I('Commencement Address | | Speaker'));
+    if (c.has('charge')) items.push(I('Charge to the Class | | Name'));
+    if (c.has('honors')) items.push(I('Presentation of Honors and Awards |'));
+    if (c.has('scholarships')) items.push(I('Presentation of Scholarships |'));
+    items.push(I('Presentation of Diplomas | | Name'));
+    if (c.has('tassel')) items.push(I('Turning of the Tassels |'));
+    if (c.has('alma')) items.push(I('Class Song or Alma Mater |'));
+    if (c.has('benediction')) items.push(I('Benediction | | Name'));
+    if (c.has('recessional')) items.push(I('Recessional | | Music'));
+    const sections = [{ h: 'Order of Ceremony', items }];
+    if (p.has('graduates')) sections.push({ h: 'The Graduates', items: [I('Graduate Name | | Honors'), I('Graduate Name | | Honors'), I('Graduate Name | | Honors')] });
+    if (p.has('honorGrads')) sections.push({ h: 'Honor Graduates', items: [I('Valedictorian | | Name'), I('Salutatorian | | Name')] });
+    if (p.has('awardsList')) sections.push({ h: 'Awards and Scholarships', items: [I('Award Name | | Student Name'), I('Scholarship Name | | Student Name')] });
+    if (p.has('faculty')) sections.push(rawSection('Faculty, Staff and Board', ['## Board of Directors', 'Add the names here, separated by commas.', '', '## Faculty and Staff', 'Add the names here, separated by commas.']));
+    if (p.has('motto')) sections.push({ h: 'Our Class', items: [I('Class Motto | | Words'), I('Class Colors | | Colors'), I('Class Flower | | Flower')] });
+    if (p.has('thanks')) sections.push(rawSection('Congratulations', ['Congratulations, graduates! Thank you to the families, teachers and friends who made this day possible.']));
+    return { name: 'Graduation Ceremony', title: 'Commencement', subtitle: 'Class of 2026', sections, sheetMode: 'program' };
+  }
 
-    const r = render(sections, () => true, false, null);
-    return { name, title, subtitle, body: r.body, sheetMode, outline: r.outline };
+  function buildPlay(a) {
+    const x = new Set(a.playExtras || []);
+    const sections = [];
+    if (x.has('cast')) sections.push({ h: 'Cast', items: [I('Character | | Student Name'), I('Character | | Student Name'), I('Character | | Student Name')] });
+    if (x.has('scenes')) sections.push({ h: 'Scenes', items: [I('Act I | | Setting'), I('Act II | | Setting')] });
+    if (x.has('crew')) sections.push({ h: 'Crew', items: [I('Director | | Name'), I('Stage Manager | | Name')] });
+    if (x.has('director')) sections.push(rawSection('A Note from the Director', ['Add the director\'s note here.']));
+    if (x.has('sponsors')) sections.push(SPONSORS);
+    if (x.has('upcoming')) sections.push(UPCOMING);
+    if (x.has('thanks')) sections.push(rawSection('Thank You', ['Thank you to everyone who made this production possible.']));
+    return { name: 'Play Program', title: 'The School Play', subtitle: '', sections, sheetMode: 'program' };
+  }
+
+  function buildAwards(a) {
+    const x = new Set(a.awardsExtras || []);
+    const items = [];
+    if (x.has('welcome')) items.push(I('Welcome | | Name'));
+    items.push(I('Presentation of Awards |'));
+    if (x.has('students')) items.push(I('Student Remarks | | Name'));
+    items.push(I('Closing Remarks | | Name'));
+    const sections = [{ h: 'Program', items }];
+    if (x.has('winners')) sections.push({ h: 'Award Winners', items: [I('Award Name | | Student Name'), I('Award Name | | Student Name')] });
+    if (x.has('sponsors')) sections.push(SPONSORS);
+    if (x.has('thanks')) sections.push(rawSection('Thank You', ['Thank you to everyone who made tonight possible.']));
+    return { name: 'Awards Program', title: 'Awards Night', subtitle: '', sections, sheetMode: 'program' };
+  }
+
+  function buildSchool(a) {
+    const b = a.kind === 'recital' ? buildRecital(a) : a.kind === 'graduation' ? buildGraduation(a)
+      : a.kind === 'play' ? buildPlay(a) : a.kind === 'awards' ? buildAwards(a) : buildConcert(a);
+    const r = render(b.sections, () => true, false, null);
+    return { name: b.name, title: b.title, subtitle: b.subtitle, body: r.body, sheetMode: b.sheetMode, outline: r.outline };
   }
 
   // A sensible starting cover for each kind of program (the person can change it).
@@ -359,13 +430,15 @@
     if (type === 'funeral') return { style: 'framed', art: art('cross') };
     if (type === 'wedding') return { style: 'framed', art: art('flower') };
     if (type === 'school') {
-      if (a.kind === 'graduation') return { style: 'banner', art: art('cap') };
-      if (a.kind === 'concert' || a.kind === 'recital') return { style: 'picture', art: art('notes') };
+      // Concerts, recitals and graduations get a formal Traditional cover: logo and name on top,
+      // the title and performers in the middle, the place and date at the bottom.
+      if (a.kind === 'graduation') return { style: 'traditional', art: none, footer: 'Place of the ceremony' };
+      if (a.kind === 'concert') return { style: 'traditional', art: none, intro: 'presents', middle: 'with the\n**Ensemble Name**\nConductor Name, conductor', footer: 'Venue name' };
+      if (a.kind === 'recital') return { style: 'traditional', art: none, intro: 'presents', middle: 'Performer Name, instrument', footer: 'Venue name' };
       return { style: 'picture', art: art('star') };
     }
     return { style: 'classic', art: none };
   }
-
   function buildOther() {
     return { name: 'New Program', title: 'Program Title', subtitle: '', sheetMode: 'service', outline: ['Order of Program'],
       body: '# Order of Program\nItem one |\nItem two |\nItem three |' };

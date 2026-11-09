@@ -162,11 +162,36 @@ function render() {
 // they live under "Advanced" instead of in the main steps.
 const SCHOOL_TEMPLATES = new Set(['school', 'recital', 'graduation', 'play', 'awards']);
 
+function isSchoolContext() {
+  return !!((state.org && state.org.kind === 'school') || (state.tpl && SCHOOL_TEMPLATES.has(state.tpl.service_type)));
+}
+
+// What starts a new program depends on who is making it: a church picks a kind of service,
+// a school picks a kind of one-off program.
+function fillNewTypeSelect() {
+  const kind = state.org && state.org.kind;
+  const cats = kind === 'school' ? ['school', 'both'] : kind === 'other' ? null : ['church', 'both'];
+  const list = cats ? state.serviceTypes.filter((s) => cats.includes(s.category)) : state.serviceTypes;
+  fillSelect($('tplNewType'), list, 'id', 'label');
+}
+
 function placeChurchTools() {
-  const school = (state.org && state.org.kind === 'school') || (state.tpl && SCHOOL_TEMPLATES.has(state.tpl.service_type));
+  const school = isSchoolContext();
   const target = school ? $('advSlot') : $('churchSlot');
   const tools = $('churchTools');
   if (tools.parentElement !== target) target.appendChild(tools);
+
+  // A school's programs are one-offs, not weekly services, so the wording and buttons change.
+  $('step2Title').textContent = school ? '2. The program' : "2. This week's service";
+  $('sheetOpen').textContent = school ? 'Fill in the program…' : 'Fill in the order of service…';
+  $('sheetHint').textContent = school
+    ? 'Type each piece, speaker and name. You can also paste them from Excel.'
+    : 'Type the hymn numbers, readings and names. You can also paste them from Excel.';
+  $('tplNext').hidden = school;
+  $('sheetTitle').textContent = school ? 'Fill in the program' : 'Weekly fill-in sheet';
+  $('sheetIntro').textContent = school
+    ? 'Type each piece, speaker and name into the grid, or copy cells in Excel and paste them here. The program updates as you type. Other text stays as it is.'
+    : "Type each week's hymn numbers, readings and names into the grid, or copy cells in Excel and paste them here. The bulletin updates as you type. Prayers and other text stay as they are.";
 }
 
 function fillEditor(tpl) {
@@ -550,6 +575,8 @@ function renderHome() {
     thumbs.push(th);
   }
 
+  $('guide2').textContent = org.kind === 'school' ? 'Fill in the program' : "Fill in this week's hymns and readings";
+
   // A school sees the School templates first, a church sees the Church ones.
   if (state.galleryFor !== org.id) {
     state.galleryFor = org.id;
@@ -862,6 +889,8 @@ function renderCoverDialog() {
 
   document.querySelectorAll('#cv_picKind button').forEach((b) => b.classList.toggle('active', b.dataset.k === cover.art.kind));
   document.querySelectorAll('#cv_emph button').forEach((b) => b.classList.toggle('active', b.dataset.e === cover.emphasis));
+  document.querySelectorAll('#cv_logoSize button').forEach((b) => b.classList.toggle('active', b.dataset.s === cover.logoSize));
+  $('cv_trad').hidden = cover.style !== 'traditional';
   $('cv_builtin').hidden = cover.art.kind !== 'builtin';
   $('cv_asset').hidden = cover.art.kind !== 'asset';
 
@@ -896,6 +925,8 @@ async function openCoverDialog() {
   const c = currentCover();
   $('cv_quote').value = c.quote;
   $('cv_footer').value = c.footer;
+  $('cv_intro').value = c.intro;
+  $('cv_middle').value = c.middle;
   renderCoverDialog();
   $('coverDialog').showModal();
 }
@@ -939,6 +970,9 @@ function wireCover() {
   }
   $('cv_quote').addEventListener('input', () => { setCover({ quote: $('cv_quote').value }, false); renderCoverPreviews(); });
   $('cv_footer').addEventListener('input', () => { setCover({ footer: $('cv_footer').value }, false); renderCoverPreviews(); });
+  $('cv_intro').addEventListener('input', () => { setCover({ intro: $('cv_intro').value }, false); renderCoverPreviews(); });
+  $('cv_middle').addEventListener('input', () => { setCover({ middle: $('cv_middle').value }, false); renderCoverPreviews(); });
+  document.querySelectorAll('#cv_logoSize button').forEach((b) => { b.onclick = () => setCover({ logoSize: b.dataset.s }); });
 }
 
 // ---------- organizations ----------
@@ -955,6 +989,7 @@ async function selectOrg(id) {
     state.fonts = []; state.logoUrl = null; state.texts = [];
   }
   refreshTextSelect();
+  fillNewTypeSelect();
   $('orgManage').disabled = !state.org;
   await refreshTemplates();
   if (state.view === 'home') renderHome(); // a different church has its own logo, colors and recent templates
@@ -1102,7 +1137,7 @@ async function init() {
   fillSelect($('format'), state.catalog.formats);
   fillSelect($('color'), state.catalog.colors);
   fillSelect($('weight'), state.catalog.weights);
-  fillSelect($('tplNewType'), state.serviceTypes, 'id', 'label');
+  fillNewTypeSelect();
 
   for (const id of ['tplName', 'title', 'subtitle', 'date', 'body', 'format', 'color', 'weight']) {
     $(id).addEventListener('input', onEdit);

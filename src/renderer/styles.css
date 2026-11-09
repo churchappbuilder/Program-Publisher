@@ -233,3 +233,6 @@ details.adv textarea { margin-top: 6px; }
 
 .cvStyle .cvThumb { height: 104px; }
 .cvStyles { gap: 8px; }
+
+#cv_trad[hidden] { display: none; }
+#cv_trad label { margin-top: 6px; }

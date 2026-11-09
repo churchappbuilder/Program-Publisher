@@ -177,7 +177,7 @@ Thank you to our teachers, families and friends.`
   {
     id: 'graduation', category: 'school', label: 'Graduation', name: 'Graduation Ceremony',
     desc: 'Processional, addresses, diplomas and recessional.',
-    title: 'Commencement', subtitle: 'Class of 2026',
+    title: 'Commencement', subtitle: 'Class of 2026', sheetMode: 'program',
     body: `# Ceremony
 Processional |
 Welcome | | Name
@@ -195,7 +195,7 @@ Add the graduates' names here, one per line.`
   {
     id: 'play', category: 'school', label: 'Play or musical', name: 'Play Program',
     desc: 'Cast, scenes and crew.',
-    title: 'The School Play', subtitle: '',
+    title: 'The School Play', subtitle: '', sheetMode: 'program',
     body: `# Cast
 Character | | Student Name
 Character | | Student Name
@@ -215,7 +215,7 @@ Thank you to everyone who made this production possible.`
   {
     id: 'awards', category: 'school', label: 'Awards night', name: 'Awards Program',
     desc: 'Welcome, awards and recognition.',
-    title: 'Awards Night', subtitle: '',
+    title: 'Awards Night', subtitle: '', sheetMode: 'program',
     body: `# Program
 Welcome | | Name
 Presentation of Awards |

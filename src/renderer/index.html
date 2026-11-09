@@ -24,7 +24,7 @@
   <section id="homeView" class="view home" hidden>
     <div class="homeInner">
       <h1 id="homeGreeting">Start a program</h1>
-      <p class="guide"><b>1</b> Start a program <span>›</span> <b>2</b> Fill in this week's hymns and readings <span>›</span> <b>3</b> Save as a PDF and print</p>
+      <p class="guide"><b>1</b> Start a program <span>›</span> <b>2</b> <span id="guide2" style="color:inherit">Fill in this week's hymns and readings</span> <span>›</span> <b>3</b> Save as a PDF and print</p>
       <div class="topRow">
         <button id="newProgram" class="newTile" type="button">
           <span class="plus">+</span>
@@ -90,9 +90,9 @@
 
       <button type="button" id="coverOpen" class="btn wide coverField" title="Choose the layout, picture and details for the front cover">Design the cover…</button>
 
-      <h3>2. This week's service</h3>
+      <h3 id="step2Title">2. This week's service</h3>
       <button type="button" id="sheetOpen" class="btn primary wide" title="Type each week's hymn numbers, readings and names, or paste them from Excel">Fill in the order of service…</button>
-      <p class="hint">Type the hymn numbers, readings and names. You can also paste them from Excel.</p>
+      <p class="hint" id="sheetHint">Type the hymn numbers, readings and names. You can also paste them from Excel.</p>
 
       <div id="churchSlot">
       <div id="churchTools">
@@ -200,6 +200,18 @@ Plain lines make a paragraph; line breaks are kept.</pre>
             <button type="button" data-e="name">The name</button>
             <button type="button" data-e="title">The title</button>
           </div>
+          <h3>Logo size</h3>
+          <div class="seg" id="cv_logoSize">
+            <button type="button" data-s="small">Small</button>
+            <button type="button" data-s="medium">Medium</button>
+            <button type="button" data-s="large">Large</button>
+          </div>
+          <div id="cv_trad">
+            <h3>Title area</h3>
+            <label>Line above the title (such as "presents")<input id="cv_intro" type="text" placeholder="presents"></label>
+            <label>Performers or details under the title (optional)<textarea id="cv_middle" rows="5" placeholder="featuring winners of the Competition&#10;with the&#10;UNIVERSITY SYMPHONY ORCHESTRA&#10;Michael Moore, director"></textarea></label>
+            <p class="hint">Use **bold** or *italic* on one line at a time.</p>
+          </div>
           <h3>Picture</h3>
           <div class="seg" id="cv_picKind">
             <button type="button" data-k="none">None</button>
@@ -232,8 +244,8 @@ Plain lines make a paragraph; line breaks are kept.</pre>
   </dialog>
   <dialog id="sheetDialog">
     <div class="sheetBox">
-      <h2>Weekly fill-in sheet</h2>
-      <p class="hint">Type each week's hymn numbers, readings and names into the grid, or copy cells in Excel and paste them here. The bulletin updates as you type. Prayers and other text stay as they are.</p>
+      <h2 id="sheetTitle">Weekly fill-in sheet</h2>
+      <p class="hint" id="sheetIntro">Type each week's hymn numbers, readings and names into the grid, or copy cells in Excel and paste them here. The bulletin updates as you type. Prayers and other text stay as they are.</p>
       <div class="grid3">
         <label>Date <input id="sh_date" type="text"></label>
         <label>Title <input id="sh_title" type="text"></label>

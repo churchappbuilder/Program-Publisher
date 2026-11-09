@@ -1,7 +1,7 @@
 {
   "name": "program-publisher",
   "productName": "Program Publisher",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Free, offline tool for designing and printing programs and bulletins for churches, schools and events.",
   "main": "src/main/main.js",
   "scripts": {

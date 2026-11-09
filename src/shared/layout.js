@@ -97,6 +97,7 @@
   // Six layouts, drawn from how real church and school covers are put together.
   const COVER_STYLES = [
     { id: 'classic', label: 'Classic', desc: 'Name, title and date, centered' },
+    { id: 'traditional', label: 'Traditional', desc: 'Formal and centered: logo and name at the top, title and performers, place and date at the bottom' },
     { id: 'headerfooter', label: 'Name on top, details below', desc: 'Name and logo at the top, title in the middle, date and address at the bottom' },
     { id: 'picture', label: 'Picture feature', desc: 'A large picture in the middle with the title around it' },
     { id: 'full', label: 'Full-page picture', desc: 'The picture fills the cover with the title over it' },
@@ -115,7 +116,10 @@
       show: { ...COVER_DEFAULT_SHOW, ...(v.show || {}) },
       quote: String(v.quote || ''),
       footer: String(v.footer || ''),
-      emphasis: v.emphasis === 'title' ? 'title' : 'name' // what stands out most: the church or school name, or the program title
+      emphasis: v.emphasis === 'title' ? 'title' : 'name', // what stands out most: the church or school name, or the program title
+      intro: String(v.intro || ''),   // a short line above the title, such as 'presents'
+      middle: String(v.middle || ''), // performers or details under the title (Traditional layout)
+      logoSize: ['small', 'medium', 'large'].includes(v.logoSize) ? v.logoSize : 'large'
     };
   }
 
@@ -308,13 +312,17 @@
   const cvDate = (c, cv) => (cv.show.date && c.date ? `<div class="date">${esc(c.date)}</div>` : '');
   const cvQuote = (cv) => (cv.quote.trim() ? `<div class="cvquote">${cv.quote.trim().split('\n').map(inline).join('<br>')}</div>` : '');
 
-  function cvInfo(ctx, cv) {
+  // Extra text at the bottom (times, location) and the address block, as separate pieces.
+  function cvFoot(cv) {
+    const foot = cv.footer.split('\n').map((s) => s.trim()).filter(Boolean);
+    return foot.length ? `<div class="cvfoot">${foot.map((f) => `<div>${inline(f)}</div>`).join('')}</div>` : '';
+  }
+  function cvAddr(ctx, cv) {
     const o = ctx.org;
     const rows = cv.show.address ? [o.address, o.phone, o.website, o.email].filter(Boolean) : [];
-    const foot = cv.footer.split('\n').map((s) => s.trim()).filter(Boolean);
-    return (foot.length ? `<div class="cvfoot">${foot.map((f) => `<div>${inline(f)}</div>`).join('')}</div>` : '') +
-      (rows.length ? `<div class="cvinfo">${rows.map((r) => `<div>${esc(r)}</div>`).join('')}</div>` : '');
+    return rows.length ? `<div class="cvinfo">${rows.map((r) => `<div>${esc(r)}</div>`).join('')}</div>` : '';
   }
+  const cvInfo = (ctx, cv) => cvFoot(cv) + cvAddr(ctx, cv);
 
   // The chosen picture (the church's own, or built-in art that takes the accent color).
   function cvArt(ctx, cv) {
@@ -332,6 +340,14 @@
     const name = cvName(ctx, cv), title = cvTitle(c), date = cvDate(c, cv), quote = cvQuote(cv), info = cvInfo(ctx, cv), pic = cvPic(ctx, cv);
     const rule = '<div class="rule"></div>';
     switch (cv.style) {
+      case 'traditional': {
+        // Formal and centered, like a concert or commencement program: logo and name on top,
+        // the title and the performers in the middle, place and date at the bottom.
+        const intro = cv.intro.trim() ? `<div class="cvintro">${inline(cv.intro.trim())}</div>` : '';
+        const mid = cv.middle.trim()
+          ? `<div class="cvmiddle">${cv.middle.trim().split('\n').map((l) => (l.trim() ? `<div>${inline(l.trim())}</div>` : '<div class="gap"></div>')).join('')}</div>` : '';
+        return { cls: 'cv-traditional', html: `<div class="cv-ttop">${name}${intro}</div><div class="cv-tmid">${title}${pic}${mid}${quote}</div><div class="cv-tbot">${cvFoot(cv)}${date}${cvAddr(ctx, cv)}</div>` };
+      }
       case 'headerfooter':
         return { cls: 'cv-headerfooter' + (pic ? ' cv-haspic' : ''), html: `<div class="cv-top">${name}</div><div class="cv-mid">${rule}${title}${pic}</div><div class="cv-bot">${date}${quote}${info}</div>` };
       case 'picture':
@@ -353,7 +369,7 @@
   // The finished cover page (used by the booklet, and by the cover designer's previews).
   function coverPanel(ctx, content) {
     const b = coverBody(ctx, content);
-    return panel('cover', 'cv ' + b.cls + ' emph-' + content.cover.emphasis, b.html, { fit: true });
+    return panel('cover', 'cv ' + b.cls + ' emph-' + content.cover.emphasis + ' logo-' + content.cover.logoSize, b.html, { fit: true });
   }
 
   function backBlock(ctx) {
