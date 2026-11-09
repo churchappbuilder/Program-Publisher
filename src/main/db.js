@@ -75,8 +75,25 @@ const MIGRATIONS = [
   // v4: what kind of logo an uploaded logo is (shield, banner, seal…), so a cover can use the right one
   `
   ALTER TABLE assets ADD COLUMN role TEXT NOT NULL DEFAULT '';
+  `,
+  // v5: earlier versions of a program, so a mistake can be undone days later
+  `
+  CREATE TABLE template_versions (
+    id INTEGER PRIMARY KEY,
+    template_id INTEGER NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    format_id TEXT NOT NULL,
+    color_id TEXT NOT NULL,
+    weight_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX template_versions_tpl ON template_versions(template_id);
   `
 ];
+
+const VERSION_GAP_SECONDS = 300; // a new saved version at most every five minutes of editing
+const VERSIONS_KEPT = 30;
 
 const ORG_FIELDS = [
   'name', 'kind', 'tagline', 'address', 'phone', 'website', 'email',
@@ -196,10 +213,36 @@ function open(file) {
         .run(...keys.map((k) => fields[k]));
       return api.getTemplate(Number(r.lastInsertRowid));
     },
+    // Keep the current state of a program as an earlier version (the newest ones are kept).
+    snapshotTemplate(id) {
+      const t = db.prepare('SELECT * FROM templates WHERE id = ?').get(id);
+      if (!t) return;
+      db.prepare('INSERT INTO template_versions (template_id, name, format_id, color_id, weight_id, content) VALUES (?,?,?,?,?,?)')
+        .run(id, t.name, t.format_id, t.color_id, t.weight_id, t.content);
+      db.prepare('DELETE FROM template_versions WHERE template_id = ? AND id NOT IN (SELECT id FROM template_versions WHERE template_id = ? ORDER BY id DESC LIMIT ?)')
+        .run(id, id, VERSIONS_KEPT);
+    },
+    listVersions: (templateId) =>
+      db.prepare('SELECT id, name, created_at, length(content) AS size FROM template_versions WHERE template_id = ? ORDER BY id DESC').all(templateId).map(plain),
+    restoreVersion(versionId) {
+      const v = db.prepare('SELECT * FROM template_versions WHERE id = ?').get(versionId);
+      if (!v) throw new Error('That version is no longer available.');
+      api.snapshotTemplate(v.template_id); // so the restore itself can be undone
+      db.prepare("UPDATE templates SET name = ?, format_id = ?, color_id = ?, weight_id = ?, content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+        .run(v.name, v.format_id, v.color_id, v.weight_id, v.content, v.template_id);
+      return api.getTemplate(v.template_id);
+    },
     updateTemplate(id, data) {
       const fields = pick(data, TEMPLATE_FIELDS);
       if ('name' in fields && !String(fields.name).trim()) throw new Error('Template name is required.');
-      if ('content' in data) fields.content = JSON.stringify(data.content || {});
+      if ('content' in data) {
+        fields.content = JSON.stringify(data.content || {});
+        const old = db.prepare('SELECT content FROM templates WHERE id = ?').get(id);
+        if (old && old.content !== fields.content) {
+          const last = db.prepare("SELECT (strftime('%s','now') - strftime('%s', created_at)) AS age FROM template_versions WHERE template_id = ? ORDER BY id DESC LIMIT 1").get(id);
+          if (!last || last.age >= VERSION_GAP_SECONDS) api.snapshotTemplate(id);
+        }
+      }
       update('templates', id, fields, "updated_at = CURRENT_TIMESTAMP");
       return api.getTemplate(id);
     },

@@ -66,6 +66,11 @@
 
   <div id="editorView" class="view editorView" hidden>
   <aside class="sidebar">
+    <div class="row undoRow">
+      <button type="button" id="undoBtn" class="btn grow" title="Undo the last change (Ctrl+Z)">↶ Undo</button>
+      <button type="button" id="redoBtn" class="btn grow" title="Redo (Ctrl+Y)">↷ Redo</button>
+      <button type="button" id="histBtn" class="btn grow" title="Go back to how this program looked earlier">Earlier versions…</button>
+    </div>
     <div class="row">
       <button id="tplDup" class="btn grow" title="Make a copy of this program">Copy</button>
       <button id="tplDel" class="btn danger grow" title="Delete this program">Delete</button>
@@ -93,7 +98,7 @@
       <div id="churchSlot">
       <div id="churchTools">
       <p class="miniLabel advOnly">Church texts: creeds, prayers and catechisms</p>
-      <p class="miniLabel">Add a creed or prayer</p>
+      <p class="miniLabel">Add a creed, prayer or saved block</p>
       <div class="row textRow">
         <select id="textSelect" class="grow" title="Choose a creed, prayer or benediction"></select>
         <button type="button" id="textInsert" class="btn">Add</button>
@@ -153,8 +158,39 @@ Plain lines make a paragraph; line breaks are kept.</pre>
       <p id="formatNote" class="hint"></p>
       <label>Paper color <select id="color"></select></label>
       <label>Paper thickness <select id="weight"></select></label>
+      <p class="miniLabel coverField">Text size</p>
+      <div class="seg" id="typeSize"></div>
+      <p class="miniLabel coverField">Margins</p>
+      <div class="seg" id="typeMargin"></div>
       <label class="check coverField"><input id="notesPage" type="checkbox"> Fill spare pages with a Notes page</label>
       <p class="hint coverField">A folded booklet always has a multiple of four pages. Turn this off to leave spare pages blank, for a loose insert or more announcements.</p>
+
+      <details class="adv" id="boxPanel">
+        <summary>Boxes and pictures on a page</summary>
+        <p class="hint">Place a text box or a picture anywhere on a page, like in a page-layout program. Drag it in the preview and pull the corner to resize.</p>
+        <div class="row">
+          <button type="button" id="boxAddText" class="btn grow">Add a text box</button>
+          <button type="button" id="boxAddPic" class="btn grow">Add a picture</button>
+        </div>
+        <div id="boxList" class="boxList"></div>
+        <div id="boxEdit" hidden>
+          <label>On page <select id="bx_page"></select></label>
+          <div id="bx_textWrap"><label>Text<textarea id="bx_text" rows="5" placeholder="Type here. Lines starting with - become bullets."></textarea></label></div>
+          <div id="bx_picWrap" hidden>
+            <label>Picture<select id="bx_asset"></select></label>
+            <label>Caption (optional)<input id="bx_caption" type="text"></label>
+          </div>
+          <div class="row">
+            <label class="check"><input id="bx_frame" type="checkbox"> Border</label>
+            <label class="check" id="bx_boldWrap"><input id="bx_bold" type="checkbox"> Bold</label>
+          </div>
+          <div class="row" id="bx_textOpts">
+            <div class="seg" id="bx_align"><button type="button" data-v="left">Left</button><button type="button" data-v="center">Center</button><button type="button" data-v="right">Right</button></div>
+            <button type="button" class="btn small" id="bx_smaller">A−</button><button type="button" class="btn small" id="bx_bigger">A+</button>
+          </div>
+          <div class="row"><button type="button" id="bx_del" class="btn danger small">Delete this box</button></div>
+        </div>
+      </details>
 
       <details class="adv">
         <summary>More saving options</summary>
@@ -165,6 +201,8 @@ Plain lines make a paragraph; line breaks are kept.</pre>
           </select>
         </label>
         <label class="check"><input id="exportColor" type="checkbox"> Show the paper color in the PDF</label>
+        <label class="check"><input id="exportCrop" type="checkbox"> Add crop marks (for cutting)</label>
+        <button type="button" id="testPrint" class="btn wide" title="Print the first sheet at true size to check your printer before a big run">Print a test page…</button>
         <p class="hint">Leave this off when you print on colored paper.</p>
       </details>
     </div>
@@ -183,6 +221,7 @@ Plain lines make a paragraph; line breaks are kept.</pre>
     </div>
     <p id="sizeLabel" class="hint"></p>
     <p id="stageMsg" class="hint ok"></p>
+    <div id="checks" class="checksBox" hidden></div>
     <p id="fitWarn" class="warn" hidden>Some text doesn't fit. Shorten it or choose a bigger format.</p>
   </main>
   </div>
@@ -194,6 +233,9 @@ Plain lines make a paragraph; line breaks are kept.</pre>
       <p class="hint">Pick a layout, add a picture if you like, and choose what shows. The preview updates as you go.</p>
       <div class="coverCols">
         <div class="coverOpts">
+          <h3>Season or occasion</h3>
+          <label><select id="cv_season"></select></label>
+          <p class="hint">Sets a matching picture, paper color and verse in one step. You can still change each one.</p>
           <h3>Layout</h3>
           <div id="cv_styles" class="cvStyles"></div>
           <h3>What stands out most</h3>
@@ -278,6 +320,8 @@ Plain lines make a paragraph; line breaks are kept.</pre>
       <label class="check" id="nm_headerWrap"><input id="nm_header" type="checkbox"> The first row is a heading row</label>
       <label id="nm_refWrap">Where is it from? (for example Psalm 95:1-7)<input id="nm_ref" type="text" placeholder="Psalm 95:1-7"></label>
       <label><span id="nm_label">Text</span><textarea id="nm_text" rows="12"></textarea></label>
+      <label class="check"><input id="nm_save" type="checkbox"> Save this so I can add it again next week</label>
+      <label id="nm_saveWrap" hidden>Name for the saved block<input id="nm_saveName" type="text" placeholder="Nursery schedule"></label>
       <p id="nm_msg" class="hint"></p>
       <div class="row end"><span class="grow"></span><button type="button" id="nm_cancel" class="btn">Cancel</button><button type="button" id="nm_add" class="btn primary">Add to the program</button></div>
     </div>
@@ -296,6 +340,7 @@ Plain lines make a paragraph; line breaks are kept.</pre>
               <button type="button" class="btn small" id="bk_bullet" title="Put a bullet in front of every line you have selected (or every line)">Make bulleted</button>
               <button type="button" class="btn small" id="bk_head" title="Add a heading">Add a heading</button>
               <button type="button" class="btn small" id="bk_table" title="Add a table: one row per line, columns separated by | or a tab">Add a table</button>
+              <button type="button" class="btn small" id="bk_save" title="Save this text so you can add it to any program from the list of creeds and prayers">Save as a standing block…</button>
             </div>
             <textarea id="bk_text" rows="12" class="mono" placeholder="# Announcements&#10;- Potluck next Sunday after worship&#10;- Nursery volunteers needed&#10;&#10;# This week&#10;[table]&#10;Tuesday | 7:00 PM | Young Adults&#10;Wednesday | 10:00 AM | Women's Bible Study&#10;[/table]"></textarea>
             <p class="hint">Lines starting with - become bullets, # makes a heading. A table has one row per line with the columns separated by | or a tab (copy from Excel and paste).</p>
@@ -314,6 +359,14 @@ Plain lines make a paragraph; line breaks are kept.</pre>
         </div>
       </div>
       <div class="row end"><span class="grow"></span><button type="button" id="bk_done" class="btn primary">Done</button></div>
+    </div>
+  </dialog>
+  <dialog id="histDialog">
+    <div class="namesBox">
+      <h2>Earlier versions</h2>
+      <p class="hint">The app keeps earlier copies of this program as you work. Pick one to bring it back. Your current version is kept too, so you can change your mind.</p>
+      <div id="hist_list" class="histList"></div>
+      <div class="row end"><span class="grow"></span><button type="button" id="hist_close" class="btn">Close</button></div>
     </div>
   </dialog>
   <dialog id="sheetDialog">
@@ -417,6 +470,8 @@ Plain lines make a paragraph; line breaks are kept.</pre>
 
   <script src="../shared/artwork.js"></script>
   <script src="../shared/layout.js"></script>
+  <script src="../shared/checks.js"></script>
+  <script src="../shared/seasons.js"></script>
   <script src="../shared/sheet.js"></script>
   <script src="../shared/wizard.js"></script>
   <script src="app.js"></script>

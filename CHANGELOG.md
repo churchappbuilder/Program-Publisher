@@ -4,6 +4,17 @@ All notable changes to Program Publisher. Versions follow [Semantic Versioning](
 while the app is below 1.0, new features bump the middle number (0.2.0 → 0.3.0) and fixes bump the last (0.2.0 → 0.2.1).
 The version shows in the app under the title and in the installer file name.
 
+## 0.10.0 — 2026-11-09
+### Added
+- **Check before printing:** a plain-language panel under the preview (sample text still showing, no title or date, text too small, a box off the page, empty pages). Saving a PDF asks you to confirm if something needs a look.
+- **Seasons and occasions** in the cover designer: Advent, Christmas, Epiphany, Lent, Easter, Pentecost, Reformation, Thanksgiving, and school kits. One choice sets a matching picture, paper color and verse.
+- **Copy for next week** now also resets announcements, calendars, Bible passages and notes, and an announcements back page, while keeping the structure.
+- **Saved (standing) blocks:** save any list, table or back-page text and add it again from the creeds-and-prayers list.
+- **Undo and Redo** (buttons and Ctrl+Z / Ctrl+Y) and **Earlier versions**: the app keeps recent versions of each program and lets you bring one back.
+- **Text size and margins** (Smaller to Huge, Tight to Roomy), kept inside safe limits.
+- **Boxes and pictures on a page:** place a text box or a photo on any page, drag it, pull its corner to resize, with a border and alignment options.
+- **Crop marks** option for cutting, and **Print a test page**, which prints the first sheet at true size with a 1-inch square to check the printer.
+
 ## 0.9.0 — 2026-11-09
 ### Added
 - **Literary night or showcase** program for schools: readings, scenes, poems, Bible verses, speeches and songs, organized by class or teacher. Each section can carry a **teacher's note** (a shaded box, written with `[note Title] ... [/note]`) about the author or the work, such as why Milton or Pilgrim's Progress matters.

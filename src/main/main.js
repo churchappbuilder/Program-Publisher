@@ -57,7 +57,7 @@ function starterTemplates(orgId, org) {
 
 const printJobs = new Map(); // webContents id -> { job, resolve }
 
-async function exportPdf({ templateId, mode, includeColor, filePath }) {
+async function exportPdf({ templateId, mode, includeColor, filePath, crop, test }) {
   const tpl = db.getTemplate(templateId);
   if (!tpl) throw new Error('Template not found.');
   const org = db.getOrg(tpl.org_id);
@@ -81,11 +81,19 @@ async function exportPdf({ templateId, mode, includeColor, filePath }) {
     const d = db.getAssetData(Number(cv.art.id));
     if (d) coverUrl = `data:${d.mime};base64,${d.base64}`;
   }
+  // Pictures placed on pages as free boxes.
+  const assetUrls = {};
+  for (const b of (tpl.content && Array.isArray(tpl.content.boxes) ? tpl.content.boxes : [])) {
+    if (b && b.kind === 'image' && b.assetId && !assetUrls[b.assetId]) {
+      const d = db.getAssetData(Number(b.assetId));
+      if (d) assetUrls[b.assetId] = `data:${d.mime};base64,${d.base64}`;
+    }
+  }
   const fonts = db.listAssets(org.id, 'font').map((a) => ({ name: a.name, ...db.getAssetData(a.id) }));
 
   const job = {
-    format, org, content: tpl.content, logoUrl, coverUrl, coverLogoUrl, fonts,
-    mode: mode === 'pages' ? 'pages' : 'sheets',
+    format, org, content: tpl.content, logoUrl, coverUrl, coverLogoUrl, fonts, assetUrls,
+    mode: mode === 'pages' ? 'pages' : 'sheets', crop: !!crop, test: !!test,
     // Paper color is normally left out: you print on colored stock, you don't print the color.
     paperHex: includeColor && color ? color.hex : '#ffffff'
   };
@@ -138,6 +146,15 @@ function registerIpc() {
     return result;
   });
 
+  // A one-sheet test print at true size, opened in the PDF viewer, so the printer can be checked before a big run.
+  ipcMain.handle('export:test', async (_e, templateId) => {
+    const file = path.join(app.getPath('temp'), 'program-publisher-test-page.pdf');
+    await exportPdf({ templateId, mode: 'sheets', includeColor: false, filePath: file, crop: false, test: true });
+    const err = await shell.openPath(file);
+    if (err) throw new Error(err);
+    return file;
+  });
+
   ipcMain.handle('paper:catalog', () => ({ formats: FORMATS, weights: WEIGHTS, colors: COLORS }));
   ipcMain.handle('presets:serviceTypes', () => SERVICE_TYPES);
 
@@ -186,6 +203,8 @@ function registerIpc() {
   });
   ipcMain.handle('templates:update', (_e, id, data) => db.updateTemplate(id, data));
   ipcMain.handle('templates:duplicate', (_e, id) => db.duplicateTemplate(id));
+  ipcMain.handle('templates:versions', (_e, id) => db.listVersions(id));
+  ipcMain.handle('templates:restore', (_e, versionId) => db.restoreVersion(versionId));
   ipcMain.handle('templates:delete', (_e, id) => db.deleteTemplate(id));
 
   ipcMain.handle('app:version', () => require('../../package.json').version);

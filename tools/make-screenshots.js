@@ -79,6 +79,20 @@ app.on('browser-window-created', (_e, win) => {
       await sleep(1500);
       await shot('ui-editor');
 
+      // a free text box on the back page, then undo and redo it
+      await ev(`document.getElementById('boxPanel').open = true`); await sleep(300);
+      await click('#boxAddText'); await sleep(600);
+      await ev(`(() => { const t = document.getElementById('bx_text'); t.value = '# Potluck Sunday\\nBring a dish to share after worship.'; t.dispatchEvent(new Event('input')); })()`);
+      await sleep(900);
+      await ev(`document.querySelector('.sidebar').scrollTop = 99999`); await sleep(300);
+      await shot('ui-boxes');
+      console.log('UNDO', await ev(`(() => { const a = document.getElementById('undoBtn').disabled; document.getElementById('undoBtn').click(); return JSON.stringify({ disabledBefore: a, boxes: (state.tpl.content.boxes || []).length }); })()`));
+      await sleep(500);
+      await ev(`document.getElementById('redoBtn').click()`); await sleep(500);
+      console.log('REDO', await ev(`(state.tpl.content.boxes || []).length`));
+      await ev(`document.getElementById('boxPanel').open = false`); await sleep(300);
+      console.log('CHECKS', await ev(`document.getElementById('checks').innerText`));
+
       // 3. the cover designer
       await click('#coverOpen'); await sleep(900);
       await shot('ui-cover');
@@ -132,6 +146,15 @@ app.on('browser-window-created', (_e, win) => {
       await click('#orgManage'); await sleep(900);
       await ev(`document.getElementById('logoList').scrollIntoView({ block: 'center' })`); await sleep(500);
       await shot('ui-logos');
+      // PDF export with crop marks and as a one-sheet test page
+      const tid = await ev('state.tpl.id');
+      for (const [label, opts] of [['plain', {}], ['crop', { crop: true }], ['test', { test: true }]]) {
+        const out = path.join(os.tmpdir(), `pp-${label}.pdf`);
+        const r = await main.exportPdf({ templateId: tid, mode: 'sheets', includeColor: false, filePath: out, ...opts });
+        const pdf = fs.readFileSync(out, 'latin1');
+        const box = (pdf.match(/\/MediaBox\s*\[([^\]]+)\]/) || [])[1];
+        console.log('PDF', label, 'sheets=' + r.sheets, 'mediabox=' + box);
+      }
     } catch (e) {
       console.log('ERROR', e && e.stack || e);
     }

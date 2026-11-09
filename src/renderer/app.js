@@ -102,6 +102,8 @@ function currentContent() {
     cover: state.tpl && state.tpl.content ? state.tpl.content.cover : undefined,
     back: state.tpl && state.tpl.content ? state.tpl.content.back : undefined,
     notesPage: !(state.tpl && state.tpl.content && state.tpl.content.notesPage === false),
+    type: state.tpl && state.tpl.content ? state.tpl.content.type : undefined,
+    boxes: state.tpl && state.tpl.content ? state.tpl.content.boxes : undefined,
     plain: !!(state.tpl && state.tpl.content && state.tpl.content.plain), // inserts have no cover header
     sheetMode: (state.tpl && state.tpl.content && state.tpl.content.sheetMode) || 'service'
   };
@@ -124,7 +126,9 @@ function render() {
   $('formatNote').textContent = f.note;
 
   // Flow the text across pages and work out the printed sheets.
-  const layout = Layout.paginate(document, geo, { org, content: currentContent(), logoUrl: state.logoUrl, coverUrl: state.coverUrl, coverLogoUrl: state.coverLogoUrl });
+  const cur = currentContent();
+  const layout = Layout.paginate(document, geo, { org, content: cur, logoUrl: state.logoUrl, coverUrl: state.coverUrl, coverLogoUrl: state.coverLogoUrl, assetUrls: assetUrlsFor(cur) });
+  state.layout = layout;
   const nSides = layout.sides.length;
   if (state.side >= nSides) state.side = nSides - 1;
   if (state.side < 0) state.side = 0;
@@ -159,6 +163,8 @@ function render() {
     : "Some text doesn't fit. Shorten it or choose a bigger format.";
 
   const nPages = layout.pages.length;
+  state.lastChecks = renderChecks(layout, geo);
+  decorateBoxes();
   $('sizeLabel').textContent = `${f.width}" × ${f.height}" flat · ${nPages} page${nPages === 1 ? '' : 's'} · ${c.name} · ${w.name}`;
 }
 
@@ -213,7 +219,12 @@ function fillEditor(tpl) {
   $('format').value = tpl.format_id;
   $('color').value = tpl.color_id;
   $('weight').value = tpl.weight_id;
+  boxState.sel = null;
+  refreshTypeButtons();
   render();
+  renderBoxList();
+  loadBoxUrls();
+  resetHist();
 }
 
 async function refreshTemplates(selectId) {
@@ -240,7 +251,7 @@ const saveTemplate = debounce(async () => {
   if (at >= 0) state.templates[at] = { ...updated, content: { ...tpl.content } };
 }, 400);
 
-function onEdit() { render(); saveTemplate(); }
+function onEdit() { render(); saveTemplate(); pushHistSoon(); }
 
 // ---------- text library ----------
 
@@ -316,11 +327,13 @@ function wireNames() {
     $('nm_text').focus();
   };
   $('nm_kind').onchange = updateNamesKind;
+  $('nm_save').onchange = () => { $('nm_saveWrap').hidden = !$('nm_save').checked; };
   $('nm_cancel').onclick = () => $('namesDialog').close();
   $('nm_add').onclick = () => {
     const block = buildListBlock();
     if (!block) { $('nm_msg').textContent = 'Type or paste something first.'; return; }
     $('namesDialog').close();
+    if ($('nm_save').checked) saveStandingBlock($('nm_saveName').value || $('nm_heading').value || 'Saved block', block);
     insertIntoBody(block);
     $('nm_text').value = '';
     $('nm_heading').value = '';
@@ -332,6 +345,15 @@ function wireNames() {
     onEdit();
   };
   wireBack();
+}
+
+// A "standing block" is text a church uses again and again (nursery schedule, welcome note, giving info).
+// It is saved in the same library as creeds and prayers, so it appears in the "Add a creed, prayer or saved block" list.
+async function saveStandingBlock(name, body) {
+  if (!state.org) return;
+  await window.api.texts.create(state.org.id, { name: String(name).trim() || 'Saved block', body });
+  state.texts = await window.api.texts.list(state.org.id);
+  refreshTextSelect();
 }
 
 // ---------- back page designer ----------
@@ -352,7 +374,7 @@ function backBox(back, widthPx) {
   const geo = Layout.geometry(formatById(state.tpl.format_id));
   if (geo.kind === 'flat') return null;
   const content = Layout.normContent({ ...state.tpl.content, body: $('body').value, back });
-  const layout = Layout.paginate(document, geo, { org, content, logoUrl: state.logoUrl, coverUrl: state.coverUrl, coverLogoUrl: state.coverLogoUrl });
+  const layout = Layout.paginate(document, geo, { org, content, logoUrl: state.logoUrl, coverUrl: state.coverUrl, coverLogoUrl: state.coverLogoUrl, assetUrls: assetUrlsFor(content) });
   const page = layout.pages.find((p) => p.role === 'back');
   const W = geo.pageW * Layout.PX_PER_IN, H = geo.pageH * Layout.PX_PER_IN;
   const k = widthPx / W;
@@ -421,7 +443,15 @@ function wireBack() {
   for (const [id, key] of Object.entries(chk)) $(id).onchange = () => setBack({ show: { ...currentBack().show, [key]: $(id).checked } });
   const ta = $('bk_text');
   const edit = (fn) => { ta.value = fn(ta.value, ta.selectionStart, ta.selectionEnd); ta.dispatchEvent(new Event('input')); };
-  $('bk_bullet').onclick = () => edit((v, s, e) => {
+  $('bk_save').onclick = async () => {
+    const body = $('bk_text').value.trim();
+    if (!body) { $('bk_note').textContent = 'Type some text first, then save it.'; return; }
+    const h = body.match(/^#\s+(.*)$/m);
+    const name = (h ? h[1] : 'Back page') + ' (saved)';
+    await saveStandingBlock(name, body);
+    $('bk_note').textContent = `Saved as "${name}". Add it to any program from the list of creeds, prayers and saved blocks.`;
+  };
+  $('bk_bullet').onclick =() => edit((v, s, e) => {
     const a = s === e ? 0 : v.lastIndexOf('\n', s - 1) + 1;
     const z = s === e ? v.length : (v.indexOf('\n', e) < 0 ? v.length : v.indexOf('\n', e));
     return v.slice(0, a) + v.slice(a, z).split('\n').map((l) => (l.trim() && !/^[-#\[]/.test(l.trim()) ? '- ' + l.trim() : l)).join('\n') + v.slice(z);
@@ -651,7 +681,7 @@ function openTemplate(id) {
 function makeThumb(format, colorId, content, coverUrl, coverLogoUrl) {
   const org = state.org;
   const geo = Layout.geometry(format);
-  const layout = Layout.paginate(document, geo, { org, content, logoUrl: state.logoUrl, coverUrl, coverLogoUrl });
+  const layout = Layout.paginate(document, geo, { org, content, logoUrl: state.logoUrl, coverUrl, coverLogoUrl, assetUrls: assetUrlsFor(content) });
   const side = 0; // the outside, so the cover shows
   const W = format.width * Layout.PX_PER_IN, H = format.height * Layout.PX_PER_IN;
   const k = Math.min(176 / W, 132 / H);
@@ -1162,6 +1192,8 @@ async function openCoverDialog() {
   cvState.images = await window.api.assets.list(state.org.id, 'image');
   cvState.logos = await window.api.assets.list(state.org.id, 'logo');
   const c = currentCover();
+  const kits = Seasons.forKind(state.org && state.org.kind);
+  $('cv_season').innerHTML = '<option value="">Choose one…</option>' + kits.map((k) => `<option value="${k.id}">${Layout.esc(k.label)}</option>`).join('');
   $('cv_quote').value = c.quote;
   $('cv_footer').value = c.footer;
   $('cv_intro').value = c.intro;
@@ -1221,6 +1253,324 @@ function wireCover() {
   $('cv_middle').addEventListener('input', () => { setCover({ middle: $('cv_middle').value }, false); renderCoverPreviews(); });
   document.querySelectorAll('#cv_logoSize button').forEach((b) => { b.onclick = () => setCover({ logoSize: b.dataset.s }); });
   wireCustomCover();
+}
+
+// ---------- checks before printing ----------
+
+function renderChecks(layout, geo) {
+  const box = $('checks');
+  const list = Checks.run({ content: currentContent(), layout, geo, org: state.org });
+  box.hidden = false;
+  box.innerHTML = list.length
+    ? list.map((c) => `<div class="ck ${c.level}"><span>${c.level === 'warn' ? '⚠' : 'ℹ'}</span><span>${Layout.esc(c.msg)}</span></div>`).join('')
+    : '<div class="ck good"><span>✓</span><span>Looks good. Nothing to fix before printing.</span></div>';
+  return list;
+}
+
+// ---------- undo, redo and earlier versions ----------
+
+const hist = { stack: [], idx: -1, busy: false };
+const histSnapshot = () => JSON.stringify({ name: $('tplName').value, content: currentContent() });
+
+function updateUndoButtons() {
+  $('undoBtn').disabled = hist.idx <= 0;
+  $('redoBtn').disabled = hist.idx >= hist.stack.length - 1;
+}
+
+function pushHist() {
+  if (hist.busy || !state.tpl) return;
+  const s = histSnapshot();
+  if (hist.stack[hist.idx] === s) return;
+  hist.stack = hist.stack.slice(0, hist.idx + 1);
+  hist.stack.push(s);
+  if (hist.stack.length > 100) hist.stack.shift();
+  hist.idx = hist.stack.length - 1;
+  updateUndoButtons();
+}
+const pushHistSoon = debounce(pushHist, 500);
+
+function resetHist() { hist.stack = []; hist.idx = -1; pushHist(); }
+
+function applySnapshot(s) {
+  const o = JSON.parse(s);
+  hist.busy = true;
+  const c = o.content;
+  state.tpl.content = { ...state.tpl.content, ...c };
+  $('tplName').value = o.name;
+  $('title').value = c.title || '';
+  $('subtitle').value = c.subtitle || '';
+  $('date').value = c.date || '';
+  $('body').value = c.body || '';
+  $('notesPage').checked = c.notesPage !== false;
+  refreshTypeButtons();
+  refreshCoverUrl().then(() => render());
+  render();
+  renderBoxList();
+  saveTemplate();
+  hist.busy = false;
+  updateUndoButtons();
+}
+
+function undo() { pushHist(); if (hist.idx > 0) { hist.idx -= 1; applySnapshot(hist.stack[hist.idx]); } }
+function redo() { if (hist.idx < hist.stack.length - 1) { hist.idx += 1; applySnapshot(hist.stack[hist.idx]); } }
+
+async function openHistory() {
+  if (!state.tpl) return;
+  await saveTemplate.flush();
+  const versions = await window.api.templates.versions(state.tpl.id);
+  const list = $('hist_list');
+  list.innerHTML = versions.length ? '' : '<p class="hint">There are no earlier versions yet. They appear as you keep working on this program.</p>';
+  for (const v of versions) {
+    const when = new Date(String(v.created_at).replace(' ', 'T') + 'Z');
+    const row = document.createElement('div');
+    row.className = 'hrow';
+    row.innerHTML = `<span>${Layout.esc(when.toLocaleString())} <small class="hint">${Layout.esc(v.name)}</small></span>`;
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn small'; b.textContent = 'Bring this back';
+    b.onclick = async () => {
+      const t = await window.api.templates.restore(v.id);
+      $('histDialog').close();
+      await refreshTemplates(t.id);
+    };
+    row.appendChild(b);
+    list.appendChild(row);
+  }
+  $('histDialog').showModal();
+}
+
+// ---------- text size and margins ----------
+
+function refreshTypeButtons() {
+  const t = Layout.normContent(state.tpl ? state.tpl.content : {}).type;
+  const near = (list, key, v) => list.reduce((a, b) => (Math.abs(b[key] - v) < Math.abs(a[key] - v) ? b : a)).id;
+  const s = near(Layout.TEXT_SIZES, 'scale', t.scale), m = near(Layout.MARGINS, 'margin', t.margin);
+  document.querySelectorAll('#typeSize button').forEach((b) => b.classList.toggle('active', b.dataset.id === s));
+  document.querySelectorAll('#typeMargin button').forEach((b) => b.classList.toggle('active', b.dataset.id === m));
+}
+
+function wireType() {
+  const make = (host, list, key) => {
+    for (const it of list) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.dataset.id = it.id; b.textContent = it.label;
+      b.onclick = () => {
+        if (!state.tpl) return;
+        state.tpl.content.type = { ...Layout.normType(state.tpl.content.type), [key]: it[key] };
+        refreshTypeButtons();
+        onEdit();
+      };
+      host.appendChild(b);
+    }
+  };
+  make($('typeSize'), Layout.TEXT_SIZES, 'scale');
+  make($('typeMargin'), Layout.MARGINS, 'margin');
+}
+
+// ---------- boxes and pictures placed on a page ----------
+
+function assetUrlsFor(content) {
+  const out = {};
+  for (const b of Layout.normBoxes(content && content.boxes)) if (b.kind === 'image' && b.assetId && assetUrlCache.get(b.assetId)) out[b.assetId] = assetUrlCache.get(b.assetId);
+  return out;
+}
+
+async function loadBoxUrls() {
+  if (!state.tpl) return;
+  const ids = Layout.normBoxes(state.tpl.content.boxes).filter((b) => b.kind === 'image' && b.assetId && !assetUrlCache.has(b.assetId)).map((b) => b.assetId);
+  if (!ids.length) return;
+  for (const id of ids) await assetUrl(id);
+  render();
+}
+
+const boxState = { sel: null, images: [] };
+const getBoxes = () => Layout.normBoxes(state.tpl && state.tpl.content.boxes);
+function setBoxes(list) { state.tpl.content.boxes = list; onEdit(); renderBoxList(); }
+const selBox = () => getBoxes().find((b) => b.id === boxState.sel) || null;
+
+function visiblePageIndex() {
+  const l = state.layout;
+  if (!l) return 1;
+  const side = l.sides[Math.min(state.side, l.sides.length - 1)] || [0];
+  const flow = side.find((i) => !['cover', 'back'].includes(l.pages[i].role));
+  return flow != null ? flow : side[0];
+}
+
+function showPage(page) {
+  const l = state.layout;
+  if (!l) return;
+  const s = l.sides.findIndex((side) => side.includes(page));
+  if (s >= 0 && s !== state.side) { state.side = s; render(); }
+}
+
+function renderBoxList() {
+  if (!state.tpl) return;
+  const list = getBoxes();
+  const host = $('boxList');
+  host.innerHTML = '';
+  list.forEach((b) => {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = b.id === boxState.sel ? 'on' : '';
+    const what = b.kind === 'image' ? 'Picture' : 'Text: ' + (b.text.replace(/\s+/g, ' ').trim().slice(0, 24) || '(empty)');
+    el.textContent = `Page ${b.page + 1} · ${what}`;
+    el.onclick = () => { boxState.sel = b.id; showPage(b.page); renderBoxList(); render(); };
+    host.appendChild(el);
+  });
+  const b = selBox();
+  $('boxEdit').hidden = !b;
+  if (!b) return;
+  const n = state.layout ? state.layout.pages.length : 4;
+  $('bx_page').innerHTML = Array.from({ length: Math.max(n, b.page + 1) }, (_, i) => `<option value="${i}">${i + 1}${i === 0 ? ' (cover)' : i === n - 1 ? ' (back)' : ''}</option>`).join('');
+  $('bx_page').value = String(b.page);
+  $('bx_textWrap').hidden = b.kind !== 'text';
+  $('bx_textOpts').hidden = b.kind !== 'text';
+  $('bx_boldWrap').hidden = b.kind !== 'text';
+  $('bx_picWrap').hidden = b.kind !== 'image';
+  if (document.activeElement !== $('bx_text')) $('bx_text').value = b.text;
+  if (document.activeElement !== $('bx_caption')) $('bx_caption').value = b.caption;
+  $('bx_frame').checked = b.frame;
+  $('bx_bold').checked = b.bold;
+  document.querySelectorAll('#bx_align button').forEach((x) => x.classList.toggle('active', x.dataset.v === b.align));
+  $('bx_asset').innerHTML = boxState.images.map((i) => `<option value="${i.id}">${Layout.esc(i.name)}</option>`).join('') + '<option value="__add">Add another picture…</option>';
+  $('bx_asset').value = String(b.assetId);
+}
+
+function patchBox(patch) {
+  const list = getBoxes().map((b) => (b.id === boxState.sel ? { ...b, ...patch } : b));
+  setBoxes(list);
+}
+
+function wireBoxes() {
+  $('boxPanel').addEventListener('toggle', () => { render(); });
+  $('boxAddText').onclick = () => {
+    if (!state.tpl) return;
+    const b = { id: 'b' + Date.now(), page: visiblePageIndex(), kind: 'text', x: 12, y: 30, w: 76, h: 18, text: '# Heading\nType your text here.', frame: true };
+    boxState.sel = b.id;
+    $('boxPanel').open = true;
+    setBoxes([...getBoxes(), b]);
+  };
+  $('boxAddPic').onclick = async () => {
+    if (!state.tpl) return;
+    boxState.images = await window.api.assets.list(state.org.id, 'image');
+    let asset = boxState.images[0];
+    if (!asset) {
+      asset = await window.api.assets.pick(state.org.id, 'image');
+      if (!asset) return;
+      boxState.images = await window.api.assets.list(state.org.id, 'image');
+    }
+    await assetUrl(asset.id);
+    const b = { id: 'b' + Date.now(), page: visiblePageIndex(), kind: 'image', x: 20, y: 25, w: 60, h: 40, assetId: asset.id };
+    boxState.sel = b.id;
+    $('boxPanel').open = true;
+    setBoxes([...getBoxes(), b]);
+  };
+  $('bx_page').onchange = () => { patchBox({ page: Number($('bx_page').value) }); showPage(Number($('bx_page').value)); };
+  $('bx_text').addEventListener('input', () => patchBox({ text: $('bx_text').value }));
+  $('bx_caption').addEventListener('input', () => patchBox({ caption: $('bx_caption').value }));
+  $('bx_frame').onchange = () => patchBox({ frame: $('bx_frame').checked });
+  $('bx_bold').onchange = () => patchBox({ bold: $('bx_bold').checked });
+  document.querySelectorAll('#bx_align button').forEach((b) => { b.onclick = () => patchBox({ align: b.dataset.v }); });
+  $('bx_bigger').onclick = () => { const b = selBox(); if (b) patchBox({ size: Math.min(3, +(b.size * 1.12).toFixed(2)) }); };
+  $('bx_smaller').onclick = () => { const b = selBox(); if (b) patchBox({ size: Math.max(0.6, +(b.size / 1.12).toFixed(2)) }); };
+  $('bx_del').onclick = () => { setBoxes(getBoxes().filter((b) => b.id !== boxState.sel)); boxState.sel = null; renderBoxList(); };
+  $('bx_asset').onchange = async () => {
+    let id = $('bx_asset').value;
+    if (id === '__add') {
+      const a = await window.api.assets.pick(state.org.id, 'image');
+      if (!a) { renderBoxList(); return; }
+      boxState.images = await window.api.assets.list(state.org.id, 'image');
+      id = a.id;
+    }
+    await assetUrl(Number(id));
+    patchBox({ assetId: Number(id) });
+  };
+
+  // Drag a box in the preview to move it; pull its corner to resize it.
+  const sheet = $('sheet');
+  sheet.addEventListener('pointerdown', (ev) => {
+    if (!$('boxPanel').open) return;
+    const el = ev.target.closest('.fbox');
+    if (!el) return;
+    ev.preventDefault();
+    const id = el.dataset.box;
+    const box = getBoxes().find((b) => b.id === id);
+    if (!box) return;
+    boxState.sel = id;
+    sheet.querySelectorAll('.fbox').forEach((o) => o.classList.toggle('sel', o === el));
+    renderBoxList();
+    const panel = el.closest('.panel');
+    const r = panel.getBoundingClientRect();
+    const resize = ev.target.classList.contains('rz');
+    const sx = ev.clientX, sy = ev.clientY;
+    let next = null;
+    el.setPointerCapture(ev.pointerId);
+    const move = (e) => {
+      const dx = ((e.clientX - sx) / r.width) * 100, dy = ((e.clientY - sy) / r.height) * 100;
+      next = resize ? { w: Math.max(5, +(box.w + dx).toFixed(1)), h: Math.max(3, +(box.h + dy).toFixed(1)) } : { x: +(box.x + dx).toFixed(1), y: +(box.y + dy).toFixed(1) };
+      if (next.x != null) { el.style.left = next.x + '%'; el.style.top = next.y + '%'; }
+      if (next.w != null) { el.style.width = next.w + '%'; el.style.height = next.h + '%'; }
+    };
+    const up = () => {
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerup', up);
+      if (next) patchBox(next);
+    };
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+  });
+}
+
+// Undo, earlier versions, seasons, crop marks and the test print.
+function wireExtras() {
+  $('undoBtn').onclick = undo;
+  $('redoBtn').onclick = redo;
+  $('histBtn').onclick = openHistory;
+  $('hist_close').onclick = () => $('histDialog').close();
+  document.addEventListener('keydown', (e) => {
+    if (state.view !== 'editor' || !(e.ctrlKey || e.metaKey)) return;
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'textarea' || (tag === 'input' && e.target.type !== 'checkbox')) return; // those keep their own undo
+    if (e.key === 'z' || e.key === 'Z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
+    else if (e.key === 'y' || e.key === 'Y') { e.preventDefault(); redo(); }
+  });
+
+  $('testPrint').onclick = async () => {
+    if (!state.tpl) return;
+    const msg = $('stageMsg');
+    msg.className = 'hint ok';
+    msg.textContent = 'Getting a test page ready…';
+    try {
+      await saveTemplate.flush();
+      await window.api.testPrint(state.tpl.id);
+      msg.textContent = 'The test page is open in your PDF viewer. Print it at 100% (not "fit to page") and measure the square.';
+    } catch (e) {
+      msg.className = 'hint err';
+      msg.textContent = 'Sorry, the test page could not be made. ' + cleanError(e);
+    }
+  };
+
+  // Season or occasion: one choice sets the picture, paper color and verse.
+  $('cv_season').onchange = () => {
+    const kit = Seasons.KITS.find((k) => k.id === $('cv_season').value);
+    if (!kit || !state.tpl) return;
+    const r = Seasons.apply(kit, currentCover());
+    if ([...$('color').options].some((o) => o.value === r.colorId)) $('color').value = r.colorId;
+    setCover(r.cover);
+    $('cv_quote').value = currentCover().quote;
+    $('cv_season').value = '';
+  };
+}
+
+// Show handles on the boxes while the box panel is open.
+function decorateBoxes() {
+  const sheet = $('sheet');
+  const on = !!(state.tpl && $('boxPanel').open);
+  sheet.classList.toggle('editing-boxes', on);
+  if (!on) return;
+  sheet.querySelectorAll('.fbox').forEach((el) => {
+    el.classList.toggle('sel', el.dataset.box === boxState.sel);
+    if (!el.querySelector('.rz')) el.insertAdjacentHTML('beforeend', '<span class="rz"></span>');
+  });
 }
 
 // ---------- organizations ----------
@@ -1555,7 +1905,10 @@ async function init() {
     await saveTemplate.flush();
     const src = state.tpl;
     const copy = await window.api.templates.duplicate(src.id);
-    const content = { ...src.content, date: '', body: Layout.clearWeekly(Layout.normContent(src.content).body) };
+    const norm = Layout.normContent(src.content);
+    const content = { ...src.content, date: '', body: Layout.clearWeekly(norm.body) };
+    // An announcements back page is weekly too.
+    if (src.content.back && ['announce', 'text'].includes(norm.back.style)) content.back = { ...norm.back, text: Layout.clearWeekly(norm.back.text, true) };
     const made = await window.api.templates.update(copy.id, { name: `${src.name} (new week)`, content });
     await refreshTemplates(made.id);
   };
@@ -1608,8 +1961,15 @@ async function init() {
     msg.textContent = 'Getting your PDF ready…';
     try {
       await saveTemplate.flush();
+      const warns = (state.lastChecks || []).filter((c) => c.level === 'warn');
+      if (warns.length && !confirm(`Before saving, ${warns.length === 1 ? 'one thing needs' : warns.length + ' things need'} a look:\n\n• ${warns.map((c) => c.msg).join('\n• ')}\n\nSave the PDF anyway?`)) {
+        msg.textContent = '';
+        $('savePdf').disabled = false;
+        return;
+      }
       const r = await window.api.exportPdf(state.tpl.id, {
         mode: $('exportMode').value,
+        crop: $('exportCrop').checked,
         includeColor: $('exportColor').checked
       });
       if (!r) msg.textContent = '';
@@ -1657,6 +2017,9 @@ async function init() {
   wireHome();
   wireCover();
   wireNames();
+  wireType();
+  wireBoxes();
+  wireExtras();
 
   const last = Number(await window.api.settings.get('lastOrg'));
   await refreshOrgs(last || undefined);

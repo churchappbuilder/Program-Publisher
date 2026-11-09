@@ -135,3 +135,23 @@ test('logos: several per organization, each with a type; rename and retype; the 
   db.close();
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test('earlier versions of a program are kept and can be restored', () => {
+  const dbm = require('../src/main/db');
+  const db = dbm.open(':memory:');
+  const org = db.createOrg({ name: 'Grace' });
+  const t = db.createTemplate(org.id, { name: 'Sunday', format_id: 'letter-bifold', color_id: 'white', weight_id: '24bond', content: { body: 'one' } });
+  db.updateTemplate(t.id, { content: { body: 'two' } });           // first edit keeps the original
+  db.updateTemplate(t.id, { content: { body: 'three' } });         // within five minutes: no new version
+  assert.strictEqual(db.listVersions(t.id).length, 1);
+  db.snapshotTemplate(t.id);                                        // an explicit snapshot (as the app does on restore)
+  const v = db.listVersions(t.id);
+  assert.strictEqual(v.length, 2);
+  const back = db.restoreVersion(v[v.length - 1].id);
+  assert.strictEqual(back.content.body, 'one');
+  assert.strictEqual(db.listVersions(t.id).length, 3, 'a restore can itself be undone');
+  for (let i = 0; i < 40; i++) db.snapshotTemplate(t.id);
+  assert.ok(db.listVersions(t.id).length <= 30);
+  db.deleteTemplate(t.id);
+  assert.strictEqual(db.listVersions(t.id).length, 0);
+});

@@ -8,8 +8,11 @@
   <style id="pagecss"></style>
   <style>
     html, body { margin: 0; padding: 0; background: #fff; }
-    .sheet { break-after: page; page-break-after: always; }
-    .sheet:last-child { break-after: auto; page-break-after: auto; }
+    .cw { position: relative; box-sizing: border-box; break-after: page; page-break-after: always; overflow: hidden; }
+    .cw:last-child { break-after: auto; page-break-after: auto; }
+    .cm { position: absolute; border: 0 solid #000; border-top-width: .5pt; border-left-width: .5pt; }
+    .testnote { position: absolute; left: .5in; bottom: .35in; display: flex; gap: .15in; align-items: center; font: 9pt sans-serif; color: #000; max-width: 5in; background: #fff; padding: .05in; z-index: 20; }
+    .testnote .sq { width: 1in; height: 1in; border: 1px solid #000; flex: none; }
   </style>
 </head>
 <body>

@@ -25,7 +25,9 @@ contextBridge.exposeInMainWorld('api', {
     create: call('templates:create'),
     update: call('templates:update'),
     duplicate: call('templates:duplicate'),
-    delete: call('templates:delete')
+    delete: call('templates:delete'),
+    versions: call('templates:versions'),
+    restore: call('templates:restore')
   },
   version: call('app:version'),
   catechism: {
@@ -40,6 +42,7 @@ contextBridge.exposeInMainWorld('api', {
     delete: call('texts:delete')
   },
   exportPdf: call('export:pdf'),
+  testPrint: call('export:test'),
   print: {
     getJob: call('print:getJob'),
     ready: call('print:ready')

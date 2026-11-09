@@ -320,3 +320,53 @@ test('back page and notes-page settings, and the custom cover layout', () => {
   assert.ok(!html.includes('data-el="logo"'), 'a hidden piece is not drawn');
   assert.ok(!html.includes('data-fit'), 'the custom cover is never shrunk automatically');
 });
+
+test('checks: placeholders, missing date, tiny text, boxes off the page', () => {
+  const Checks = require('../src/shared/checks');
+  const geo = Layout.geometry({ width: 11, height: 8.5, panels: 2 });
+  const org = { name: 'Grace', logo_asset_id: 1 };
+  const clean = Checks.run({ content: { title: 'Sunday', date: 'Nov 8', body: '# Welcome\nPrelude | | Jane Smith' }, layout: { pages: [], overflow: false }, geo, org });
+  assert.deepStrictEqual(clean, []);
+  const r = Checks.run({ content: { title: '', date: '', body: 'Hymn | | Number\nPoem: "Poem Title" | | Student Name', type: { scale: 0.8 }, boxes: [{ id: 'a', page: 1, x: 80, y: 10, w: 40, h: 10 }] }, layout: { pages: [{ role: 'notes' }, { role: 'blank' }], overflow: true }, geo, org });
+  const msgs = r.map((x) => x.msg).join(' | ');
+  assert.ok(/too much|doesn't fit/i.test(msgs) && /no title/i.test(msgs) && /no date/i.test(msgs));
+  assert.ok(/sample text/.test(msgs) && /text size is small/i.test(msgs) && /past the edge/.test(msgs) && /pages are empty/.test(msgs));
+  assert.ok(Checks.examples('Add the leader\'s line here.\nSermon | | Pastor Smith').length === 1);
+});
+
+test('seasons set art, paper and verse without overwriting a chosen verse', () => {
+  const Seasons = require('../src/shared/seasons');
+  const r = Seasons.apply('advent', { style: 'classic', quote: '' });
+  assert.strictEqual(r.cover.art.id, 'wreath');
+  assert.strictEqual(r.colorId, 'lavender');
+  assert.strictEqual(r.cover.style, 'picture');
+  assert.ok(/Matthew 24:42/.test(r.cover.quote));
+  assert.ok(!('quote' in Seasons.apply('advent', { quote: 'My own verse' }).cover), 'a verse the person wrote is kept');
+  assert.ok('quote' in Seasons.apply('easter', { quote: Seasons.KITS[0].quote }).cover, 'another kit verse is replaced');
+  assert.ok(Seasons.forKind('school').every((k) => k.group !== 'church'));
+  assert.ok(Seasons.KITS.every((k) => require('../src/shared/artwork').svg(k.art)));
+});
+
+test('text size, margins and free boxes', () => {
+  const t = Layout.normType({ scale: 5, margin: 0.1 });
+  assert.strictEqual(t.scale, 1.4); assert.strictEqual(t.margin, 0.8);
+  const boxes = Layout.normBoxes([{ id: 'x', page: 2, kind: 'text', x: 10, y: 20, w: 50, h: 10, text: '- hello' }, { kind: 'image', assetId: 3, w: 1 }, null]);
+  assert.strictEqual(boxes.length, 2);
+  assert.strictEqual(boxes[1].w, 5, 'a box is never smaller than 5%');
+  const org = { name: 'G', tagline: '', address: '', phone: '', website: '', email: '' };
+  const content = Layout.normContent({ title: 'T', cover: { style: 'classic' }, type: { scale: 1.15 }, boxes });
+  const html = Layout.coverPanel({ org, content }, content);
+  assert.ok(html.includes('--bs:1.15'));
+  assert.deepStrictEqual(Layout.normBoxes(undefined), []);
+});
+
+test('copy for next week resets announcements, passages and notes but keeps the structure', () => {
+  const src = ['# Welcome', 'Prelude | | Jane', '', '# Announcements', '- Potluck Sunday', '- Nursery help', '[table header]', 'Day | Time', 'Tue | 7pm', '[/table]', '', '[scripture Psalm 95:1-3]', '1 O come', '[/scripture]', '', '# Sermon', '- keep this bullet'].join('\n');
+  const out = Layout.clearWeekly(src);
+  assert.ok(out.includes('Prelude |') && !out.includes('Jane'));
+  assert.ok(!out.includes('Potluck') && out.includes('- New announcement'));
+  assert.ok(!out.includes('Tue | 7pm') && out.includes('Day | Time | Event'));
+  assert.ok(out.includes('[scripture Passage]') && !out.includes('1 O come'));
+  assert.ok(out.includes('- keep this bullet'), 'bullets outside weekly sections stay');
+  assert.ok(!Layout.clearWeekly('- A\n- B', true).includes('- B'), 'allWeekly resets every bullet');
+});

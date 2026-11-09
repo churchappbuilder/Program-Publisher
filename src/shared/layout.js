@@ -91,8 +91,56 @@
       plain: !!c.plain, // an insert: just the text, no cover header or page numbers
       cover: normCover(c.cover),
       back: normBack(c.back),
-      notesPage: c.notesPage !== false // fill spare pages in a booklet with a Notes page (otherwise they are left blank)
+      notesPage: c.notesPage !== false, // fill spare pages in a booklet with a Notes page (otherwise they are left blank)
+      type: normType(c.type),
+      boxes: normBoxes(c.boxes)
     };
+  }
+
+  // ---------- text size and margins (kept within safe limits) ----------
+  const TEXT_SIZES = [{ id: 'small', label: 'Smaller', scale: 0.9 }, { id: 'normal', label: 'Normal', scale: 1 }, { id: 'large', label: 'Larger', scale: 1.15 }, { id: 'xlarge', label: 'Huge', scale: 1.3 }];
+  const MARGINS = [{ id: 'tight', label: 'Tight', margin: 0.8 }, { id: 'normal', label: 'Normal', margin: 1 }, { id: 'wide', label: 'Roomy', margin: 1.3 }];
+  function normType(v) {
+    v = v || {};
+    const num = (n, d, lo, hi) => (Number.isFinite(Number(n)) && n !== '' && n != null ? Math.max(lo, Math.min(hi, Number(n))) : d);
+    return { scale: num(v.scale, 1, 0.8, 1.4), margin: num(v.margin, 1, 0.8, 1.5) }; // never smaller than about 8 pt or closer than 0.25 in to the edge
+  }
+
+  // ---------- free boxes: text and pictures placed anywhere on a page ----------
+  // x, y, w, h are percents of the page. page is the page number counting from 0 (0 = cover).
+  function normBoxes(list) {
+    if (!Array.isArray(list)) return [];
+    const num = (n, d, lo, hi) => (Number.isFinite(Number(n)) && n !== '' && n != null ? Math.max(lo, Math.min(hi, Number(n))) : d);
+    return list.filter((b) => b && typeof b === 'object').slice(0, 60).map((b, i) => ({
+      id: String(b.id || 'b' + (i + 1)),
+      page: Math.max(0, Math.min(99, Math.round(num(b.page, 1, 0, 99)))),
+      kind: b.kind === 'image' ? 'image' : 'text',
+      x: num(b.x, 10, -5, 100), y: num(b.y, 10, -5, 100), w: num(b.w, 40, 5, 105), h: num(b.h, 20, 3, 105),
+      text: String(b.text || ''),
+      size: num(b.size, 1, 0.6, 3),
+      align: ['left', 'center', 'right'].includes(b.align) ? b.align : 'left',
+      bold: !!b.bold,
+      assetId: b.assetId ? Number(b.assetId) : '',
+      caption: String(b.caption || ''),
+      frame: !!b.frame // a thin border (a boxed announcement)
+    }));
+  }
+
+  function boxHtml(b, ctx) {
+    const pos = `left:${b.x}%;top:${b.y}%;width:${b.w}%;height:${b.h}%`;
+    if (b.kind === 'image') {
+      const url = ctx.assetUrls && ctx.assetUrls[b.assetId];
+      const img = url ? `<img src="${url}" alt="">` : '<div class="fph">Picture</div>';
+      return `<div class="fbox fimg${b.frame ? ' fframe' : ''}" data-box="${esc(b.id)}" style="${pos}">${img}${b.caption ? `<div class="fcap">${inline(b.caption)}</div>` : ''}</div>`;
+    }
+    const inner = parseBody(b.text).filter((x) => !x.pageBreak).map((x) => x.html).join('');
+    return `<div class="fbox ftext${b.frame ? ' fframe' : ''}" data-box="${esc(b.id)}" style="${pos};font-size:${b.size}em;text-align:${b.align};${b.bold ? 'font-weight:700;' : ''}">${inner}</div>`;
+  }
+
+  function addBoxes(panelHtml, pageIdx, boxes, ctx) {
+    const mine = boxes.filter((b) => b.page === pageIdx);
+    if (!mine.length) return panelHtml;
+    return panelHtml.replace(/<\/div>$/, mine.map((b) => boxHtml(b, ctx)).join('') + '</div>');
   }
 
   // ---------- back cover ----------
@@ -177,15 +225,32 @@
   // "Next week": keep the structure of a service but blank what changes weekly.
   // On order-of-service lines everything after the first | is dropped
   // (hymn numbers, scripture passages, who is preaching). Everything else is kept.
-  function clearWeekly(text) {
-    return String(text || '').split('\n').map((line) => {
+  // Sections that change every week (announcements, calendars, prayer lists, ...) are reset too, and any
+  // Bible passage or note box gets sample text, so the old week's words never reach the new bulletin.
+  // allWeekly: treat the whole text as weekly (used for an announcements back page).
+  const WEEKLY_HEADING = /announce|this week|calendar|prayer|birthday|anniversar|nursery|greeting|fellowship|upcoming|coming up|schedule|news/i;
+  function clearWeekly(text, allWeekly) {
+    const out = [];
+    let weekly = !!allWeekly;
+    let skip = null;      // the kind of block whose lines are being dropped
+    let bullet = false;   // one sample bullet has been written for this section
+    for (const line of String(text || '').split('\n')) {
       const t = line.trim();
-      if (!t || /^(#|>|-|\^|\[|={3,})/.test(t)) return line;
-      const m = t.match(/^(\+\s+)?(.*)$/);
-      const rest = m[2];
-      if (ROLE_RE.test(rest) || !rest.includes('|')) return line;
-      return (m[1] || '') + rest.split('|')[0].trim() + ' |';
-    }).join('\n');
+      if (skip) { if (new RegExp('^\\[/' + skip + '\\]$', 'i').test(t)) skip = null; continue; }
+      let m;
+      if ((m = t.match(/^#\s+(.*)$/))) { weekly = !!allWeekly || WEEKLY_HEADING.test(m[1]); bullet = false; out.push(line); continue; }
+      if (/^\[scripture(\s[^\]]*)?\]$/i.test(t)) { out.push('[scripture Passage]', 'Type or paste the verses here, one verse per line.', '[/scripture]'); skip = 'scripture'; continue; }
+      if (/^\[note(\s[^\]]*)?\]$/i.test(t)) { out.push(line, 'Write the note here.', '[/note]'); skip = 'note'; continue; }
+      if (weekly && /^\[table(\s[^\]]*)?\]$/i.test(t)) { out.push(line, 'Day | Time | Event', '[/table]'); skip = 'table'; continue; }
+      if (weekly && /^\[columns(\s[^\]]*)?\]$/i.test(t)) { out.push(line, 'Name', '[/columns]'); skip = 'columns'; continue; }
+      if (weekly && /^[-•]\s+/.test(t)) { if (!bullet) { out.push('- New announcement'); bullet = true; } continue; }
+      if (!t || /^(#|>|-|\^|\[|={3,})/.test(t)) { out.push(line); continue; }
+      const mm = t.match(/^(\+\s+)?(.*)$/);
+      const rest = mm[2];
+      if (ROLE_RE.test(rest) || !rest.includes('|')) { out.push(line); continue; }
+      out.push((mm[1] || '') + rest.split('|')[0].trim() + ' |');
+    }
+    return out.join('\n');
   }
 
   // The flat paper format whose size equals one finished page of this format
@@ -568,6 +633,7 @@
 
   // The finished cover page (used by the booklet, and by the cover designer's previews).
   function coverPanel(ctx, content) {
+    curType = content.type || curType;
     const b = coverBody(ctx, content);
     const wmUrl = ctx.coverLogoUrl || ctx.logoUrl;
     const wm = content.cover.watermark && wmUrl ? `<div class="cv-water"><img src="${wmUrl}" alt=""></div>` : '';
@@ -589,9 +655,10 @@
     return { cls: 'flow backflow', html: `<div class="backtext">${text}</div>` + (bk.style === 'announce' && ident ? `<div class="backfoot">${ident}</div>` : '') };
   }
 
+  let curType = { scale: 1, margin: 1 }; // set by paginate/coverPanel before pages are built
   function panel(role, cls, innerHtml, opts) {
     opts = opts || {};
-    return `<div class="panel ${cls}" data-role="${role}"${opts.fit ? ' data-fit="1"' : ''}>` +
+    return `<div class="panel ${cls}" data-role="${role}"${opts.fit ? ' data-fit="1"' : ''} style="--bs:${curType.scale};--mg:${curType.margin}">` +
       `<div class="inner">${innerHtml}</div>` +
       (opts.num ? `<div class="pagenum">${opts.num}</div>` : '') + '</div>';
   }
@@ -608,6 +675,7 @@
   function paginate(doc, geo, ctx) {
     const content = normContent(ctx.content);
     const c = { ...ctx, content };
+    curType = content.type;
     const blocks = parseBody(content.body);
     const head = geo.kind === 'flat' && !content.plain ? `<div class="head">${headBlock(c, content)}</div>` : '';
 
@@ -617,7 +685,7 @@
     sheet.style.cssText = `position:absolute;left:-99999px;top:0;visibility:hidden;` +
       `width:${geo.pageW}in;height:${geo.pageH}in;font-size:${PX_PER_IN * EM_IN}px`;
     setVars(sheet, ctx.org);
-    sheet.innerHTML = '<div class="panel flow"><div class="inner"></div></div>';
+    sheet.innerHTML = `<div class="panel flow" style="--bs:${curType.scale};--mg:${curType.margin}"><div class="inner"></div></div>`;
     doc.body.appendChild(sheet);
     const inner = sheet.querySelector('.inner');
     const overflows = () => inner.scrollHeight > inner.clientHeight + 1;
@@ -687,6 +755,9 @@
       }
     }
 
+    // Free boxes (text and pictures placed by hand) are drawn on top of their page.
+    if (content.boxes.length) pages.forEach((p, i) => { p.panel = addBoxes(p.panel, i, content.boxes, c); });
+
     return { geo, pages, sides: impose(geo.kind, pages.length), overflow };
   }
 
@@ -709,5 +780,5 @@
     return overflow;
   }
 
-  return { PX_PER_IN, EM_IN, COVER_STYLES, CUSTOM_PIECES, BACK_STYLES, normCustom, normBack, normCover, coverPanel, geometry, impose, normContent, clearWeekly, insertFormatId, classifyLine, parseItemLine, formatItemLine, parseBody, paginate, sideHtml, pageHtml, fitAll, setVars, esc };
+  return { TEXT_SIZES, MARGINS, normType, normBoxes, PX_PER_IN, EM_IN, COVER_STYLES, CUSTOM_PIECES, BACK_STYLES, normCustom, normBack, normCover, coverPanel, geometry, impose, normContent, clearWeekly, insertFormatId, classifyLine, parseItemLine, formatItemLine, parseBody, paginate, sideHtml, pageHtml, fitAll, setVars, esc };
 });

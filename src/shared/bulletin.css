@@ -3,13 +3,13 @@
    which keeps the preview and the printout proportional. */
 
 .sheet { display: flex; font-family: var(--body-font); color: #222; overflow: hidden; }
-.panel { position: relative; flex: 1; display: flex; padding: 1.9em 1.9em 1.9em; min-width: 0; }
+.panel { position: relative; flex: 1; display: flex; padding: calc(1.9em * var(--mg, 1)); min-width: 0; }
 .preview .panel + .panel { border-left: 1px dashed rgba(0, 0, 0, .35); }
 
 .inner { width: 100%; display: flex; flex-direction: column; overflow: hidden; overflow-wrap: anywhere; text-align: center; }
 .inner > * { flex-shrink: 0; }
 .panel.center .inner { justify-content: center; }
-.panel.flow .inner { text-align: left; }
+.panel.flow .inner { text-align: left; font-size: calc(1em * var(--bs, 1)); }
 .measure .pagenum { display: none; }
 
 .pagenum { position: absolute; left: 0; right: 0; bottom: .7em; text-align: center; font-size: .55em; opacity: .6; }
@@ -234,3 +234,17 @@ table.grid td:first-child { white-space: nowrap; }
 .tnote-h { font-family: var(--heading-font); font-style: italic; font-size: .66em; color: var(--primary); margin-bottom: .2em; }
 .tnote p { font-size: .62em; line-height: 1.5; margin: 0 0 .4em; text-align: left; }
 .tnote p:last-child { margin-bottom: 0; }
+
+/* free boxes placed on a page */
+.fbox { position: absolute; box-sizing: border-box; overflow: hidden; text-align: left; z-index: 3; }
+.fbox.fframe { border: 1.5px solid var(--primary); padding: .4em .6em; }
+.fbox.ftext .para, .fbox.ftext .bul { margin: .25em 0; }
+.fbox.ftext .sec:first-child { margin-top: 0; }
+.fbox.fimg { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.fbox.fimg img { max-width: 100%; max-height: 100%; min-height: 0; object-fit: contain; flex: 1 1 auto; }
+.fbox .fcap { flex: 0 0 auto; font-size: .55em; font-style: italic; text-align: center; padding-top: .25em; }
+.fph { background: #e8e5de; color: #777; font-size: .7em; display: grid; place-items: center; width: 100%; height: 100%; }
+.editing-boxes .fbox { cursor: move; outline: 1px dashed rgba(31, 58, 95, .5); }
+.editing-boxes .fbox.sel { outline: 2px solid #d4a017; }
+.fbox .rz { position: absolute; right: 0; bottom: 0; width: .9em; height: .9em; background: #d4a017; cursor: nwse-resize; display: none; }
+.editing-boxes .fbox.sel .rz { display: block; }
