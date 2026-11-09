@@ -205,3 +205,28 @@ h2 { font-family: var(--heading-font); font-size: 1.5em; margin: 0 0 .3em; line-
 
 /* full-page cover: built-in art sits in the open space between the name and the title band */
 .cv-full .cv-bleed.art .cvart { margin-top: 32%; height: 36%; }
+
+/* ---------- tables, Bible passages, back page, custom cover ---------- */
+table.grid { width: 100%; border-collapse: collapse; font-size: .62em; line-height: 1.4; margin: .5em 0 .8em; }
+table.grid td, table.grid th { padding: .22em .6em .22em 0; vertical-align: top; text-align: left; }
+table.grid th { font-weight: 700; border-bottom: 1px solid var(--accent); color: var(--primary); }
+table.grid tr.grp td { font-weight: 700; text-decoration: underline; padding-top: .7em; }
+table.grid td:first-child { white-space: nowrap; }
+.scrip-ref { font-family: var(--heading-font); font-style: italic; font-size: .72em; color: var(--primary); margin: .6em 0 .15em; }
+.scrip { font-size: .68em; line-height: 1.5; margin: 0 0 .35em; text-align: left; }
+.scrip .vn { font-size: .62em; font-weight: 700; color: var(--accent); margin-right: .25em; vertical-align: super; line-height: 0; }
+.panel.backflow .inner { justify-content: flex-start; }
+.panel.backflow .backtext { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.panel.backflow .backfoot { flex: 0 0 auto; border-top: 1px solid var(--accent); padding-top: .6em; margin-top: .5em; text-align: center; }
+.backfoot .logo { max-height: 1.8em; margin-bottom: .2em; }
+.backfoot .backname { font-size: .7em; }
+.backfoot .contact { font-size: .5em; line-height: 1.6; }
+.panel.cv-custom .inner { position: relative; display: block; overflow: hidden; }
+.cvx { position: absolute; transform: translate(-50%, -50%); text-align: center; line-height: 1.2; }
+.cvx img.logo { max-width: 100%; max-height: none; width: 100%; height: auto; margin: 0; }
+.cvx .cvart, .cvx .cvimg { width: 100%; }
+.cvx .cvart svg, .cvx .cvimg { width: 100%; height: auto; display: block; }
+.cvx h2 { margin: 0; }
+.cvx.sel { outline: 2px dashed #d4a017; outline-offset: 3px; cursor: move; }
+.cv-editing .cvx { cursor: move; }
+.cvx .org { white-space: normal; }

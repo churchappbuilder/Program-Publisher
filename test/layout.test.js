@@ -159,7 +159,7 @@ test('covers: normalizing, defaults, and all seven layouts render with every opt
   assert.strictEqual(Layout.normCover({ style: 'nonsense' }).style, 'classic');
   assert.strictEqual(Layout.normCover({ emphasis: 'title' }).emphasis, 'title');
   assert.strictEqual(Layout.normCover({ art: { kind: 'bad' } }).art.kind, 'none');
-  assert.strictEqual(Layout.COVER_STYLES.length, 7);
+  assert.strictEqual(Layout.COVER_STYLES.length, 8);
   assert.strictEqual(c.logoSize, 'large');
   assert.strictEqual(c.intro, '');
   assert.strictEqual(c.middle, '');
@@ -281,4 +281,42 @@ test('covers: choose a different logo, faint logo background', () => {
   assert.ok(make({ watermark: true }, {}).includes('class="cv-water"') && make({ watermark: true }, {}).includes('cv-wm'));
   assert.ok(!make({}, {}).includes('cv-water'));
   assert.ok(!make({ watermark: true }, { logoUrl: null }).includes('cv-water')); // nothing to show without a logo
+});
+test('tables, Bible passages and bullets in the body', () => {
+  const html = (t) => Layout.parseBody(t).map((b) => b.html || '').join('');
+  const tbl = html('[table header]\nDay | Time | What\nTuesday | 7:00 PM | Young Adults\n# Sunday\n9:00 AM\tSunday School\n[/table]');
+  assert.ok(tbl.includes('<table class="grid">') && tbl.includes('<th>Day</th>') && tbl.includes('<td>Young Adults</td>'));
+  assert.ok(tbl.includes('class="grp"') && tbl.includes('<td>Sunday School</td>'), 'heading row and tab-separated cells');
+  assert.ok(!html('[table]\nA | B\n[/table]').includes('<th>'), 'no header unless asked');
+  const bl = Layout.parseBody('[scripture Psalm 95:1-7]\n' + Array.from({ length: 12 }, (_, i) => `${i + 1} Verse text ${i + 1}`).join('\n') + '\n[/scripture]');
+  assert.strictEqual(bl[0].type, 'scrip-ref');
+  assert.ok(bl[0].keepNext && bl[0].html.includes('Psalm 95:1-7'));
+  assert.strictEqual(bl.length, 5, 'one heading and twelve verses in blocks of three, so they split across pages');
+  assert.ok(bl[1].html.includes('<sup class="vn">1</sup>'));
+  // a block left open at the end is still printed
+  assert.ok(html('[table]\nA | B').includes('<table'));
+  assert.ok(html('- One\n- Two').split('class="bul"').length === 3);
+  assert.strictEqual(Layout.classifyLine('[table header]'), 'cols-open');
+  assert.strictEqual(Layout.classifyLine('[/scripture]'), 'cols-close');
+});
+
+test('back page and notes-page settings, and the custom cover layout', () => {
+  assert.strictEqual(Layout.normContent({}).notesPage, true);
+  assert.strictEqual(Layout.normContent({ notesPage: false }).notesPage, false);
+  const b = Layout.normBack({ style: 'nonsense' });
+  assert.strictEqual(b.style, 'name');
+  assert.ok(b.show.logo && b.show.contact);
+  assert.strictEqual(Layout.normBack({ style: 'announce', text: '- Hi' }).style, 'announce');
+  // custom cover: pieces are positioned, clamped, and can be hidden
+  const cv = Layout.normCover({ style: 'custom', custom: { title: { x: 20, y: 120, s: 9, hide: false }, logo: { hide: true } } });
+  assert.strictEqual(cv.custom.title.x, 20);
+  assert.strictEqual(cv.custom.title.y, 100, 'clamped');
+  assert.strictEqual(cv.custom.title.s, 3, 'clamped');
+  assert.strictEqual(cv.custom.name.x, 50, 'unspecified pieces keep their starting place');
+  const org = { name: 'Grace', tagline: 'T', address: '', phone: '', website: '', email: '' };
+  const content = Layout.normContent({ title: 'Sunday', cover: cv });
+  const html = Layout.coverPanel({ org, content, logoUrl: 'data:image/png;base64,AA' }, content);
+  assert.ok(html.includes('cv-custom') && html.includes('data-el="title"') && html.includes('left:20%'));
+  assert.ok(!html.includes('data-el="logo"'), 'a hidden piece is not drawn');
+  assert.ok(!html.includes('data-fit'), 'the custom cover is never shrunk automatically');
 });

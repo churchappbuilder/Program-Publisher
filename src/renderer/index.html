@@ -66,12 +66,6 @@
 
   <div id="editorView" class="view editorView" hidden>
   <aside class="sidebar">
-    <h3>My programs</h3>
-    <select id="tplSelect" size="5" class="list" title="Click a program to open it"></select>
-    <div class="row">
-      <select id="tplNewType" class="grow" title="What kind of program to start"></select>
-      <button id="tplNew" class="btn">New</button>
-    </div>
     <div class="row">
       <button id="tplDup" class="btn grow" title="Make a copy of this program">Copy</button>
       <button id="tplDel" class="btn danger grow" title="Delete this program">Delete</button>
@@ -89,10 +83,11 @@
       <label class="coverField">Date <input id="date" type="text" placeholder="Sunday, January 4, 2026"></label>
 
       <button type="button" id="coverOpen" class="btn wide coverField" title="Choose the layout, picture and details for the front cover">Design the cover…</button>
+      <button type="button" id="backOpen" class="btn wide coverField" title="Choose what goes on the back page: announcements, the church's name and address, or your own text">Design the back page…</button>
 
       <h3 id="step2Title">2. This week's service</h3>
       <button type="button" id="sheetOpen" class="btn primary wide" title="Type each week's hymn numbers, readings and names, or paste them from Excel">Fill in the order of service…</button>
-      <button type="button" id="namesOpen" class="btn wide" title="Paste a list of graduates, performers or donors and print it in columns">Add a list of names…</button>
+      <button type="button" id="namesOpen" class="btn wide" title="Add a bulleted list, a table, a list of names in columns, or a Bible passage">Add a list, table or Bible passage…</button>
       <p class="hint" id="sheetHint">Type the hymn numbers, readings and names. You can also paste them from Excel.</p>
 
       <div id="churchSlot">
@@ -144,6 +139,9 @@ People: And also with you.  People/All are bold
 - Announcement bullet
 ^ Centered text
 [notes] or [notes 8]        ruled writing lines
+[table] ... [/table]        a grid: one row per line, cells split by | or a tab
+[scripture Psalm 95:1-7] ... [/scripture]   a Bible passage, one verse per line
+[columns 3] ... [/columns]  names in columns
 ===                         start a new page
 **bold**   *italic*         inside any line
 Plain lines make a paragraph; line breaks are kept.</pre>
@@ -155,6 +153,8 @@ Plain lines make a paragraph; line breaks are kept.</pre>
       <p id="formatNote" class="hint"></p>
       <label>Paper color <select id="color"></select></label>
       <label>Paper thickness <select id="weight"></select></label>
+      <label class="check coverField"><input id="notesPage" type="checkbox"> Fill spare pages with a Notes page</label>
+      <p class="hint coverField">A folded booklet always has a multiple of four pages. Turn this off to leave spare pages blank, for a loose insert or more announcements.</p>
 
       <details class="adv">
         <summary>More saving options</summary>
@@ -208,6 +208,20 @@ Plain lines make a paragraph; line breaks are kept.</pre>
             <button type="button" data-s="medium">Medium</button>
             <button type="button" data-s="large">Large</button>
           </div>
+          <div id="cv_custom">
+            <h3>Place things yourself</h3>
+            <p class="hint">Drag any piece on the preview to move it. Or choose a piece below and make it bigger, smaller, wider or narrower.</p>
+            <div id="cv_pieces" class="pieces"></div>
+            <div class="row" id="cv_pieceBtns">
+              <button type="button" class="btn small" data-a="bigger">Bigger</button>
+              <button type="button" class="btn small" data-a="smaller">Smaller</button>
+              <button type="button" class="btn small" data-a="wider">Wider</button>
+              <button type="button" class="btn small" data-a="narrower">Narrower</button>
+              <button type="button" class="btn small" data-a="hide">Hide / show</button>
+              <button type="button" class="btn small" data-a="reset">Start over</button>
+            </div>
+            <p class="hint" id="cv_pieceNote"></p>
+          </div>
           <div id="cv_trad">
             <h3>Title area</h3>
             <label>Line above the title (such as "presents")<input id="cv_intro" type="text" placeholder="presents"></label>
@@ -247,15 +261,59 @@ Plain lines make a paragraph; line breaks are kept.</pre>
   </dialog>
   <dialog id="namesDialog">
     <div class="namesBox">
-      <h2>Add a list of names</h2>
-      <p class="hint">For graduates, performers, a roster, or donors. Paste the names from Excel or Word, one per line. Add a hometown or honors after a tab or a | on the same line.</p>
-      <label>Heading (optional)<input id="nm_heading" type="text" placeholder="The Graduates"></label>
-      <label>Columns
+      <h2>Add a list, table or Bible passage</h2>
+      <label>What do you want to add?
+        <select id="nm_kind">
+          <option value="bullets">A bulleted list (announcements)</option>
+          <option value="table">A table or grid (a calendar, a schedule)</option>
+          <option value="names">Names in columns (graduates, birthdays, a roster)</option>
+          <option value="scripture">A Bible passage (a call to worship or a reading)</option>
+        </select>
+      </label>
+      <p class="hint" id="nm_hint"></p>
+      <label>Heading (optional)<input id="nm_heading" type="text" placeholder="Announcements"></label>
+      <label id="nm_colsWrap">Columns
         <select id="nm_cols"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select>
       </label>
-      <label>Names<textarea id="nm_text" rows="12" placeholder="Jack Aaron Bovay | Peoria, IL&#10;Anna Grace Morken | Dallas, TX&#10;Natalie Elisabeth Zwolanek"></textarea></label>
+      <label class="check" id="nm_headerWrap"><input id="nm_header" type="checkbox"> The first row is a heading row</label>
+      <label id="nm_refWrap">Where is it from? (for example Psalm 95:1-7)<input id="nm_ref" type="text" placeholder="Psalm 95:1-7"></label>
+      <label><span id="nm_label">Text</span><textarea id="nm_text" rows="12"></textarea></label>
       <p id="nm_msg" class="hint"></p>
       <div class="row end"><span class="grow"></span><button type="button" id="nm_cancel" class="btn">Cancel</button><button type="button" id="nm_add" class="btn primary">Add to the program</button></div>
+    </div>
+  </dialog>
+  <dialog id="backDialog">
+    <div class="coverBox">
+      <h2>Design the back page</h2>
+      <p class="hint">Choose what goes on the back of the bulletin. The preview updates as you go.</p>
+      <div class="coverCols">
+        <div class="coverOpts">
+          <h3>Layout</h3>
+          <div id="bk_styles" class="cvStyles"></div>
+          <div id="bk_textWrap">
+            <h3>Your text</h3>
+            <div class="snips">
+              <button type="button" class="btn small" id="bk_bullet" title="Put a bullet in front of every line you have selected (or every line)">Make bulleted</button>
+              <button type="button" class="btn small" id="bk_head" title="Add a heading">Add a heading</button>
+              <button type="button" class="btn small" id="bk_table" title="Add a table: one row per line, columns separated by | or a tab">Add a table</button>
+            </div>
+            <textarea id="bk_text" rows="12" class="mono" placeholder="# Announcements&#10;- Potluck next Sunday after worship&#10;- Nursery volunteers needed&#10;&#10;# This week&#10;[table]&#10;Tuesday | 7:00 PM | Young Adults&#10;Wednesday | 10:00 AM | Women's Bible Study&#10;[/table]"></textarea>
+            <p class="hint">Lines starting with - become bullets, # makes a heading. A table has one row per line with the columns separated by | or a tab (copy from Excel and paste).</p>
+          </div>
+          <h3 id="bk_showLabel">Show at the bottom</h3>
+          <div class="checks">
+            <label class="check"><input id="bk_logo" type="checkbox"> Logo</label>
+            <label class="check"><input id="bk_name" type="checkbox"> Name</label>
+            <label class="check"><input id="bk_tagline" type="checkbox"> Tagline</label>
+            <label class="check"><input id="bk_contact" type="checkbox"> Address and contact</label>
+          </div>
+        </div>
+        <div class="coverPrev">
+          <div id="bk_preview"></div>
+          <p id="bk_note" class="hint"></p>
+        </div>
+      </div>
+      <div class="row end"><span class="grow"></span><button type="button" id="bk_done" class="btn primary">Done</button></div>
     </div>
   </dialog>
   <dialog id="sheetDialog">

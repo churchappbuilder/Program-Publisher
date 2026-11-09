@@ -241,3 +241,11 @@ test('concert rosters list each section of the ensemble in columns', () => {
   assert.ok(b.includes('[columns 4]') && b.includes('## Soprano') && b.includes('## Tenor'));
   assert.ok(!b.includes('## Soloists'));   // soloists have no roster
 });
+test('church wizard can print Bible passages and put announcements on the back', () => {
+  const r = Wizard.build('church', { tradition: 'presbyterian', extras: ['callScripture', 'readingText', 'backAnnounce'] }, {});
+  assert.ok(r.body.includes('[scripture Psalm 95:1-3]') && r.body.includes('[/scripture]'));
+  assert.ok(r.body.includes('[scripture Passage]'));
+  assert.strictEqual(r.back.style, 'announce');
+  const plain = Wizard.build('church', { tradition: 'presbyterian' }, {});
+  assert.ok(!plain.body.includes('[scripture') && !plain.back);
+});

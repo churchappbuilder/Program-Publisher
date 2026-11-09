@@ -4,6 +4,17 @@ All notable changes to Program Publisher. Versions follow [Semantic Versioning](
 while the app is below 1.0, new features bump the middle number (0.2.0 → 0.3.0) and fixes bump the last (0.2.0 → 0.2.1).
 The version shows in the app under the title and in the installer file name.
 
+## 0.8.0 — 2026-11-09
+### Added
+- **Design the back page:** choose the name and address, announcements (with the name at the bottom), only your own text, or blank. Choose what shows at the bottom.
+- **Notes page is optional.** Spare pages in a booklet can be left blank instead (Paper section).
+- **Your own cover layout (expert):** drag the logo, name, title, picture, date and more anywhere on the cover, and make any piece bigger, smaller, wider or narrower. The default layouts stay safe and automatic.
+- **Add a list, table or Bible passage:** bulleted announcements, tables and grids (paste from Excel), names in columns, and Bible passages of any length with small verse numbers.
+- The church wizard can print the call-to-worship verses and the Scripture reading text, and put announcements on the back page.
+
+### Changed
+- The "My programs" list is gone from the editor; open programs from the start screen. Deleting a program returns to the start screen.
+
 ## 0.7.0 — 2026-11-08
 ### Added
 - **Logo library** for every church and school: add every version of your logo (shield, banner, seal...), choose the main one, and pick a different one for any cover. Works when setting up a new organization too.

@@ -46,7 +46,10 @@
           opt('responsive', 'A responsive reading (Leader / People)'), opt('creed', 'A creed', true),
           opt('prayers', 'Prayers of the people', true), opt('announce', 'Announcements', true), opt('children', "Children's message")] },
       { id: 'extras', label: 'Printed text', kind: 'multi',
-        options: [opt('printText', 'Print the text of the creed and prayers (public-domain wording)', true)] }
+        options: [opt('printText', 'Print the text of the creed and prayers (public-domain wording)', true),
+          opt('callScripture', 'Print the Scripture verses for the call to worship'),
+          opt('readingText', 'Print the text of the Scripture reading'),
+          opt('backAnnounce', 'Put the announcements on the back page')] }
     ],
     funeral: [
       { id: 'tradition', label: 'What style of service?', kind: 'single', def: 'presbyterian',
@@ -290,7 +293,25 @@
     else if (a.service === 'special') { title = 'Special Service'; }
     else [title, subtitle] = WORSHIP_TITLES[T];
     if (T === 'anglican' && !short && a.service !== 'communion' && a.service !== 'special') { /* keeps 'Holy Eucharist' */ }
-    return { name: title, title, subtitle, body: r.body, sheetMode: 'service', outline: r.outline };
+    // Bible passages printed in the bulletin: placeholders to replace with the week's verses.
+    let body = r.body;
+    const passage = (ref, text) => `[scripture ${ref}]\n${text}\n[/scripture]`;
+    if (hasAny(a.extras, 'callScripture') || hasAny(a.extras, 'readingText')) {
+      body = body.split('\n').map((line) => {
+        const t = line.trim().replace(/^\+\s+/, '');
+        if (hasAny(a.extras, 'callScripture') && /^Call to Worship\s*\|/i.test(t)) {
+          return line + '\n\n' + passage('Psalm 95:1-3', '1 O come, let us sing unto the LORD: let us make a joyful noise to the rock of our salvation.\n2 Let us come before his presence with thanksgiving, and make a joyful noise unto him with psalms.\n3 For the LORD is a great God, and a great King above all gods.') + '\n';
+        }
+        if (hasAny(a.extras, 'readingText') && /^Scripture Reading\s*\|/i.test(t)) {
+          return line + '\n\n' + passage('Passage', 'Type or paste the verses here, one verse per line.') + '\n';
+        }
+        return line;
+      }).join('\n');
+    }
+    const back = hasAny(a.extras, 'backAnnounce')
+      ? { style: 'announce', text: '# Announcements\n- First announcement\n- Second announcement\n\n# This Week\n[table]\nToday | 9:00 AM | Sunday School\nToday | 10:00 AM | Morning Worship\nWednesday | 7:00 PM | Bible Study\n[/table]' }
+      : undefined;
+    return { name: title, title, subtitle, body, sheetMode: 'service', outline: r.outline, ...(back ? { back } : {}) };
   }
 
   function buildFuneral(a, texts) {

@@ -100,6 +100,8 @@ function currentContent() {
     date: $('date').value,
     body: $('body').value,
     cover: state.tpl && state.tpl.content ? state.tpl.content.cover : undefined,
+    back: state.tpl && state.tpl.content ? state.tpl.content.back : undefined,
+    notesPage: !(state.tpl && state.tpl.content && state.tpl.content.notesPage === false),
     plain: !!(state.tpl && state.tpl.content && state.tpl.content.plain), // inserts have no cover header
     sheetMode: (state.tpl && state.tpl.content && state.tpl.content.sheetMode) || 'service'
   };
@@ -172,12 +174,6 @@ function isSchoolContext() {
 
 // What starts a new program depends on who is making it: a church picks a kind of service,
 // a school picks a kind of one-off program.
-function fillNewTypeSelect() {
-  const kind = state.org && state.org.kind;
-  const cats = kind === 'school' ? ['school', 'both'] : kind === 'other' ? null : ['church', 'both'];
-  const list = cats ? state.serviceTypes.filter((s) => cats.includes(s.category)) : state.serviceTypes;
-  fillSelect($('tplNewType'), list, 'id', 'label');
-}
 
 function placeChurchTools() {
   const school = isSchoolContext();
@@ -213,6 +209,7 @@ function fillEditor(tpl) {
   refreshCoverUrl().then(() => { if (state.view === 'editor' && state.tpl === tpl) render(); });
   $('stageMsg').textContent = '';
   $('editor').classList.toggle('isInsert', !!tpl.content.plain);
+  $('notesPage').checked = tpl.content.notesPage !== false;
   $('format').value = tpl.format_id;
   $('color').value = tpl.color_id;
   $('weight').value = tpl.weight_id;
@@ -221,16 +218,7 @@ function fillEditor(tpl) {
 
 async function refreshTemplates(selectId) {
   state.templates = state.org ? await window.api.templates.list(state.org.id) : [];
-  const sel = $('tplSelect');
-  sel.innerHTML = '';
-  for (const t of state.templates) {
-    const o = document.createElement('option');
-    o.value = t.id;
-    o.textContent = t.name;
-    sel.appendChild(o);
-  }
   const pick = state.templates.find((t) => t.id === selectId) || state.templates[0] || null;
-  if (pick) sel.value = pick.id;
   fillEditor(pick);
 }
 
@@ -250,8 +238,6 @@ const saveTemplate = debounce(async () => {
   // Keep the list (used by the start screen's Recent) up to date with what was just saved.
   const at = state.templates.findIndex((t) => t.id === updated.id);
   if (at >= 0) state.templates[at] = { ...updated, content: { ...tpl.content } };
-  const opt = $('tplSelect').querySelector(`option[value="${updated.id}"]`);
-  if (opt) opt.textContent = updated.name;
 }, 400);
 
 function onEdit() { render(); saveTemplate(); }
@@ -286,26 +272,162 @@ function findText(value) {
   return state.builtin.find((t) => t.id === id) || null;
 }
 
-// "Add a list of names": turns pasted names (one per line, optional detail after a tab or |)
-// into a [columns N] block in the program.
+// "Add a list, table or Bible passage": turns pasted text into the right block of the program.
+const NM_KINDS = {
+  bullets: { hint: 'Type or paste one announcement per line. Each gets a bullet.', label: 'Announcements (one per line)', heading: 'Announcements', place: 'Potluck next Sunday after worship\nNursery volunteers are needed\nThe office is closed Monday' },
+  table: { hint: 'One row per line. Separate the columns with | or a tab, so you can copy cells straight from Excel.', label: 'Rows', heading: 'This week', place: 'Tuesday | 7:00 PM | Young Adults\nWednesday | 10:00 AM | Women\'s Bible Study\nSunday | 9:00 AM | Sunday School' },
+  names: { hint: 'One name per line. Add a hometown, date or honors after a tab or a | on the same line.', label: 'Names', heading: 'The Graduates', place: 'Jack Aaron Bovay | Peoria, IL\nAnna Grace Morken | Dallas, TX\nNatalie Elisabeth Zwolanek' },
+  scripture: { hint: 'Type or paste the verses, one verse per line. Start a line with its number (for example 3 For the LORD is a great God) to show small verse numbers. Long passages flow onto the next page.', label: 'Verses', heading: '', place: '1 Oh come, let us sing to the LORD;\n2 Let us come before his presence with thanksgiving;\n3 For the LORD is the great God.' }
+};
+
+function updateNamesKind() {
+  const k = $('nm_kind').value;
+  const spec = NM_KINDS[k];
+  $('nm_hint').textContent = spec.hint;
+  $('nm_label').textContent = spec.label;
+  $('nm_text').placeholder = spec.place;
+  $('nm_heading').placeholder = spec.heading || 'Call to Worship';
+  $('nm_colsWrap').hidden = k !== 'names';
+  $('nm_headerWrap').hidden = k !== 'table';
+  $('nm_refWrap').hidden = k !== 'scripture';
+}
+
+function buildListBlock() {
+  const k = $('nm_kind').value;
+  const lines = $('nm_text').value.split(/\r?\n/).map((l) => l.trimEnd()).filter((l) => l.trim());
+  if (!lines.length) return null;
+  const heading = $('nm_heading').value.trim();
+  const head = heading ? '# ' + heading + '\n\n' : '';
+  if (k === 'bullets') return head + lines.map((l) => '- ' + l.trim().replace(/^[-•*]\s+/, '')).join('\n');
+  if (k === 'table') return head + '[table' + ($('nm_header').checked ? ' header' : '') + ']\n' + lines.map((l) => l.replace(/\t/g, ' | ')).join('\n') + '\n[/table]';
+  if (k === 'scripture') {
+    const ref = $('nm_ref').value.trim();
+    return head + '[scripture' + (ref ? ' ' + ref : '') + ']\n' + lines.join('\n') + '\n[/scripture]';
+  }
+  const n = Number($('nm_cols').value) || 2;
+  return head + '[columns ' + n + ']\n' + lines.map((l) => l.replace(/\t/g, ' | ')).join('\n') + '\n[/columns]';
+}
+
 function wireNames() {
   $('namesOpen').onclick = () => {
     $('nm_msg').textContent = '';
+    updateNamesKind();
     $('namesDialog').showModal();
     $('nm_text').focus();
   };
+  $('nm_kind').onchange = updateNamesKind;
   $('nm_cancel').onclick = () => $('namesDialog').close();
   $('nm_add').onclick = () => {
-    const lines = $('nm_text').value.split(/\r?\n/).map((l) => l.replace(/\t/g, ' | ').trim()).filter(Boolean);
-    if (!lines.length) { $('nm_msg').textContent = 'Paste or type at least one name first.'; return; }
-    const heading = $('nm_heading').value.trim();
-    const n = Number($('nm_cols').value) || 2;
-    const block = (heading ? '# ' + heading + '\n\n' : '') + '[columns ' + n + ']\n' + lines.join('\n') + '\n[/columns]';
+    const block = buildListBlock();
+    if (!block) { $('nm_msg').textContent = 'Type or paste something first.'; return; }
     $('namesDialog').close();
     insertIntoBody(block);
     $('nm_text').value = '';
     $('nm_heading').value = '';
+    $('nm_ref').value = '';
   };
+  $('notesPage').onchange = () => {
+    if (!state.tpl) return;
+    state.tpl.content.notesPage = $('notesPage').checked;
+    onEdit();
+  };
+  wireBack();
+}
+
+// ---------- back page designer ----------
+
+const bkState = { built: false };
+
+function currentBack() { return Layout.normBack(state.tpl.content.back); }
+
+function setBack(patch) {
+  state.tpl.content.back = { ...currentBack(), ...patch };
+  onEdit();
+  renderBackDialog();
+}
+
+// The back page drawn at true size and shrunk to a given width (null when the paper has no back page).
+function backBox(back, widthPx) {
+  const org = state.org;
+  const geo = Layout.geometry(formatById(state.tpl.format_id));
+  if (geo.kind === 'flat') return null;
+  const content = Layout.normContent({ ...state.tpl.content, body: $('body').value, back });
+  const layout = Layout.paginate(document, geo, { org, content, logoUrl: state.logoUrl, coverUrl: state.coverUrl, coverLogoUrl: state.coverLogoUrl });
+  const page = layout.pages.find((p) => p.role === 'back');
+  const W = geo.pageW * Layout.PX_PER_IN, H = geo.pageH * Layout.PX_PER_IN;
+  const k = widthPx / W;
+  const box = document.createElement('div');
+  box.className = 'thumbBox';
+  box.style.width = Math.round(W * k) + 'px';
+  box.style.height = Math.round(H * k) + 'px';
+  const sheet = document.createElement('div');
+  sheet.className = 'sheet';
+  sheet.style.cssText = `width:${W}px;height:${H}px;font-size:${Layout.PX_PER_IN * Layout.EM_IN}px;transform:scale(${k});background:#fff`;
+  Layout.setVars(sheet, org);
+  sheet.innerHTML = page.panel;
+  box.appendChild(sheet);
+  return { box, sheet };
+}
+
+function renderBackDialog() {
+  const bk = currentBack();
+  const styles = $('bk_styles');
+  if (!bkState.built) {
+    bkState.built = true;
+    for (const s of Layout.BACK_STYLES) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cvStyle';
+      b.dataset.id = s.id;
+      b.innerHTML = `<div class="cvThumb"></div><b>${Layout.esc(s.label)}</b><small>${Layout.esc(s.desc)}</small>`;
+      b.onclick = () => setBack({ style: s.id });
+      styles.appendChild(b);
+    }
+  }
+  const cards = styles.querySelectorAll('.cvStyle');
+  Layout.BACK_STYLES.forEach((s, i) => {
+    cards[i].classList.toggle('on', s.id === bk.style);
+    cards[i].querySelector('.cvThumb').innerHTML = '';
+    const t = backBox({ ...bk, style: s.id, text: s.id === 'announce' || s.id === 'text' ? (bk.text || '# Announcements\n- Potluck Sunday\n- Nursery help') : bk.text }, 82);
+    if (t) { cards[i].querySelector('.cvThumb').appendChild(t.box); Layout.fitAll(t.sheet); }
+  });
+  $('bk_textWrap').hidden = !['announce', 'text'].includes(bk.style);
+  const chk = { bk_logo: 'logo', bk_name: 'name', bk_tagline: 'tagline', bk_contact: 'contact' };
+  for (const [id, key] of Object.entries(chk)) $(id).checked = !!bk.show[key];
+  $('bk_showLabel').textContent =bk.style === 'name' ? 'Show on the page' : 'Show at the bottom';
+  const prev = $('bk_preview');
+  prev.innerHTML = '';
+  const big = backBox(bk, 330);
+  if (big) { prev.appendChild(big.box); Layout.fitAll(big.sheet); }
+  $('bk_note').textContent = big ? '' : 'This paper size is a single flat sheet, so it has no separate back page. Choose a folded size to design a back page.';
+}
+
+async function openBackDialog() {
+  if (!state.tpl) return;
+  $('bk_text').value = currentBack().text;
+  renderBackDialog();
+  $('backDialog').showModal();
+}
+
+function wireBack() {
+  $('backOpen').onclick = openBackDialog;
+  $('bk_done').onclick = () => $('backDialog').close();
+  $('bk_text').addEventListener('input', () => {
+    state.tpl.content.back = { ...currentBack(), text: $('bk_text').value };
+    onEdit();
+    renderBackDialog();
+  });
+  const chk = { bk_logo: 'logo', bk_name: 'name', bk_tagline: 'tagline', bk_contact: 'contact' };
+  for (const [id, key] of Object.entries(chk)) $(id).onchange = () => setBack({ show: { ...currentBack().show, [key]: $(id).checked } });
+  const ta = $('bk_text');
+  const edit = (fn) => { ta.value = fn(ta.value, ta.selectionStart, ta.selectionEnd); ta.dispatchEvent(new Event('input')); };
+  $('bk_bullet').onclick = () => edit((v, s, e) => {
+    const a = s === e ? 0 : v.lastIndexOf('\n', s - 1) + 1;
+    const z = s === e ? v.length : (v.indexOf('\n', e) < 0 ? v.length : v.indexOf('\n', e));
+    return v.slice(0, a) + v.slice(a, z).split('\n').map((l) => (l.trim() && !/^[-#\[]/.test(l.trim()) ? '- ' + l.trim() : l)).join('\n') + v.slice(z);
+  });
+  $('bk_head').onclick = () => edit((v) => (v ? v.replace(/\n*$/, '\n\n') : '') + '# Heading\n');
+  $('bk_table').onclick = () => edit((v) => (v ? v.replace(/\n*$/, '\n\n') : '') + '[table]\nTuesday | 7:00 PM | Young Adults\nWednesday | 10:00 AM | Bible Study\n[/table]\n');
 }
 
 // Put text into the body at the cursor, separated from its neighbors by blank lines.
@@ -521,7 +643,6 @@ function openTemplate(id) {
   showView('editor');
   const t = state.templates.find((x) => x.id === id);
   if (!t) return;
-  $('tplSelect').value = t.id;
   fillEditor(t);
 }
 
@@ -766,7 +887,7 @@ async function createFromWizard() {
       format_id: f.formatId,
       color_id: org.default_color_id,
       weight_id: org.default_weight_id,
-      content: { title: f.title, subtitle: f.subtitle, date: f.date, body: b.body, sheetMode: b.sheetMode, cover: wizardCover(b, f.coverStyle) }
+      content: { title: f.title, subtitle: f.subtitle, date: f.date, body: b.body, sheetMode: b.sheetMode, cover: wizardCover(b, f.coverStyle), ...(b.back ? { back: b.back } : {}) }
     });
     await refreshTemplates(made.id);
     showView('editor');
@@ -877,12 +998,90 @@ function setCover(patch, redraw) {
   if (redraw !== false) renderCoverDialog();
 }
 
+// "Your own layout": each piece of the cover can be dragged, and the one you pick can be resized.
+cvState.sel = 'title';
+const clampPct = (n) => Math.max(0, Math.min(100, Math.round(n * 10) / 10));
+
+function setCustom(id, patch) {
+  const cv = currentCover();
+  setCover({ custom: { ...cv.custom, [id]: { ...cv.custom[id], ...patch } } });
+}
+
+function makeCoverDraggable(sheet) {
+  const inner = sheet.querySelector('.inner');
+  if (!inner) return;
+  sheet.classList.add('cv-editing');
+  sheet.querySelectorAll('.cvx').forEach((el) => {
+    const id = el.dataset.el;
+    el.classList.toggle('sel', id === cvState.sel);
+    el.addEventListener('pointerdown', (ev) => {
+      ev.preventDefault();
+      cvState.sel = id;
+      sheet.querySelectorAll('.cvx').forEach((o) => o.classList.toggle('sel', o === el));
+      el.setPointerCapture(ev.pointerId);
+      const er = el.getBoundingClientRect();
+      const dx = ev.clientX - (er.left + er.width / 2), dy = ev.clientY - (er.top + er.height / 2);
+      let pos = null;
+      const move = (e) => {
+        const r = inner.getBoundingClientRect();
+        pos = { x: clampPct(((e.clientX - dx - r.left) / r.width) * 100), y: clampPct(((e.clientY - dy - r.top) / r.height) * 100) };
+        el.style.left = pos.x + '%';
+        el.style.top = pos.y + '%';
+      };
+      const up = () => {
+        el.removeEventListener('pointermove', move);
+        el.removeEventListener('pointerup', up);
+        if (pos) setCustom(id, pos); else renderCoverDialog();
+      };
+      el.addEventListener('pointermove', move);
+      el.addEventListener('pointerup', up);
+    });
+  });
+}
+
+function renderCustomControls(cover) {
+  $('cv_custom').hidden = cover.style !== 'custom';
+  if (cover.style !== 'custom') return;
+  const box = $('cv_pieces');
+  box.innerHTML = '';
+  for (const p of Layout.CUSTOM_PIECES) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'piece' + (cvState.sel === p.id ? ' on' : '') + (cover.custom[p.id].hide ? ' off' : '');
+    b.textContent = p.label;
+    b.onclick = () => { cvState.sel = p.id; renderCoverDialog(); };
+    box.appendChild(b);
+  }
+  const g = cover.custom[cvState.sel];
+  $('cv_pieceNote').textContent = g && g.hide ? 'This piece is hidden. Press "Hide / show" to bring it back.' : '';
+}
+
+function wireCustomCover() {
+  $('cv_pieceBtns').querySelectorAll('button').forEach((b) => {
+    b.onclick = () => {
+      const cv = currentCover();
+      const id = cvState.sel;
+      const g = cv.custom[id];
+      const byWidth = id === 'logo' || id === 'art'; // pictures grow by width, text by size
+      switch (b.dataset.a) {
+        case 'bigger': return byWidth ? setCustom(id, { w: Math.min(100, g.w + 6) }) : setCustom(id, { s: Math.min(3, +(g.s * 1.12).toFixed(2)) });
+        case 'smaller': return byWidth ? setCustom(id, { w: Math.max(8, g.w - 6) }) : setCustom(id, { s: Math.max(0.4, +(g.s / 1.12).toFixed(2)) });
+        case 'wider': return setCustom(id, { w: Math.min(100, g.w + 8) });
+        case 'narrower': return setCustom(id, { w: Math.max(8, g.w - 8) });
+        case 'hide': return setCustom(id, { hide: !g.hide });
+        case 'reset': return setCover({ custom: Layout.normCustom({}) });
+      }
+    };
+  });
+}
+
 function renderCoverPreviews() {
   const cover = currentCover();
   const prev = $('cv_preview');
   prev.innerHTML = '';
   const big = coverBox(cover, 290);
   prev.appendChild(big.box);
+  if (cover.style === 'custom') makeCoverDraggable(big.sheet);
   const sheets = [big.sheet];
   const cards = $('cv_styles').querySelectorAll('.cvStyle .cvThumb');
   Layout.COVER_STYLES.forEach((s, i) => {
@@ -923,7 +1122,8 @@ function renderCoverDialog() {
   document.querySelectorAll('#cv_picKind button').forEach((b) => b.classList.toggle('active', b.dataset.k === cover.art.kind));
   document.querySelectorAll('#cv_emph button').forEach((b) => b.classList.toggle('active', b.dataset.e === cover.emphasis));
   document.querySelectorAll('#cv_logoSize button').forEach((b) => b.classList.toggle('active', b.dataset.s === cover.logoSize));
-  $('cv_trad').hidden = cover.style !== 'traditional';
+  $('cv_trad').hidden = !['traditional', 'custom'].includes(cover.style);
+  renderCustomControls(cover);
   const lsel = $('cv_logoSel');
   const main = state.org && state.org.logo_asset_id;
   lsel.innerHTML = '<option value="">The main logo</option>' + cvState.logos.filter((l) => l.id !== main).map((l) => `<option value="${l.id}">${Layout.esc(l.name)} (${Layout.esc(logoRoleName(l.role))})</option>`).join('');
@@ -1020,6 +1220,7 @@ function wireCover() {
   $('cv_intro').addEventListener('input', () => { setCover({ intro: $('cv_intro').value }, false); renderCoverPreviews(); });
   $('cv_middle').addEventListener('input', () => { setCover({ middle: $('cv_middle').value }, false); renderCoverPreviews(); });
   document.querySelectorAll('#cv_logoSize button').forEach((b) => { b.onclick = () => setCover({ logoSize: b.dataset.s }); });
+  wireCustomCover();
 }
 
 // ---------- organizations ----------
@@ -1062,7 +1263,6 @@ async function selectOrg(id) {
     state.fonts = []; state.logoUrl = null; state.texts = [];
   }
   refreshTextSelect();
-  fillNewTypeSelect();
   $('orgManage').disabled = !state.org;
   await refreshTemplates();
   if (state.view === 'home') renderHome(); // a different church has its own logo, colors and recent templates
@@ -1296,7 +1496,6 @@ async function init() {
   fillSelect($('format'), state.catalog.formats);
   fillSelect($('color'), state.catalog.colors);
   fillSelect($('weight'), state.catalog.weights);
-  fillNewTypeSelect();
 
   for (const id of ['tplName', 'title', 'subtitle', 'date', 'body', 'format', 'color', 'weight']) {
     $(id).addEventListener('input', onEdit);
@@ -1427,14 +1626,6 @@ async function init() {
       $('savePdf').disabled = false;
     }
   };
-  $('tplSelect').addEventListener('change', () => {
-    fillEditor(state.templates.find((t) => t.id === Number($('tplSelect').value)) || null);
-  });
-  $('tplNew').onclick = async () => {
-    if (!state.org) return;
-    const t = await window.api.templates.create(state.org.id, $('tplNewType').value);
-    await refreshTemplates(t.id);
-  };
   $('tplDup').onclick = async () => {
     if (!state.tpl) return;
     const t = await window.api.templates.duplicate(state.tpl.id);
@@ -1444,6 +1635,7 @@ async function init() {
     if (!state.tpl || !confirm(`Delete the template "${state.tpl.name}"? This cannot be undone.`)) return;
     await window.api.templates.delete(state.tpl.id);
     await refreshTemplates();
+    showView('home');
   };
 
   $('orgSelect').addEventListener('change', () => selectOrg(Number($('orgSelect').value)));

@@ -248,3 +248,14 @@ details.adv textarea { margin-top: 6px; }
 .logoRow .lmain { margin: 0; font-size: 13px; font-weight: 500; white-space: nowrap; display: flex; gap: 6px; align-items: center; }
 .logoRow .lmain input { width: auto; margin: 0; }
 .assets { grid-template-columns: 1fr; }
+
+/* custom cover piece chips, back page designer */
+.pieces { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.pieces .piece { border: 1px solid #c9cfd9; background: #fff; border-radius: 999px; padding: 5px 12px; font-size: 13px; cursor: pointer; }
+.pieces .piece.on { background: #1f3a5f; color: #fff; border-color: #1f3a5f; }
+.pieces .piece.off { text-decoration: line-through; opacity: .6; }
+#cv_pieceBtns { flex-wrap: wrap; gap: 6px; }
+#bk_preview { display: flex; justify-content: center; }
+#backDialog { width: 1000px; max-width: 96vw; }
+#backDialog .coverCols { grid-template-columns: 1fr 360px; }
+#bk_styles { grid-template-columns: repeat(2, 1fr); }

@@ -89,7 +89,27 @@
       date: c.date || '',
       body: c.body != null ? String(c.body) : legacyBody(c),
       plain: !!c.plain, // an insert: just the text, no cover header or page numbers
-      cover: normCover(c.cover)
+      cover: normCover(c.cover),
+      back: normBack(c.back),
+      notesPage: c.notesPage !== false // fill spare pages in a booklet with a Notes page (otherwise they are left blank)
+    };
+  }
+
+  // ---------- back cover ----------
+  const BACK_STYLES = [
+    { id: 'name', label: 'Name and address', desc: 'The logo, name and contact details, centered' },
+    { id: 'announce', label: 'Announcements', desc: 'Your announcements or other text, with the name and address at the bottom' },
+    { id: 'text', label: 'Only my text', desc: 'Just the text you type: announcements, a calendar, a prayer list' },
+    { id: 'blank', label: 'Blank', desc: 'Leave the back page empty' }
+  ];
+  const BACK_DEFAULT_SHOW = { logo: true, name: true, tagline: true, contact: true };
+
+  function normBack(v) {
+    v = v || {};
+    return {
+      style: BACK_STYLES.some((s) => s.id === v.style) ? v.style : 'name',
+      show: { ...BACK_DEFAULT_SHOW, ...(v.show || {}) },
+      text: String(v.text || '')
     };
   }
 
@@ -102,8 +122,36 @@
     { id: 'picture', label: 'Picture feature', desc: 'A large picture in the middle with the title around it' },
     { id: 'full', label: 'Full-page picture', desc: 'The picture fills the cover with the title over it' },
     { id: 'banner', label: 'Color banner', desc: 'A colored band across the top with your name' },
-    { id: 'framed', label: 'Framed', desc: 'A border around centered text, good with a verse' }
+    { id: 'framed', label: 'Framed', desc: 'A border around centered text, good with a verse' },
+    { id: 'custom', label: 'Your own layout (expert)', desc: 'Drag the logo, name, title and picture wherever you want them' }
   ];
+
+  // Starting positions for the "your own layout" cover. x and y are the center of each piece as a percent
+  // of the page, w is its width in percent, s its text size (1 = normal).
+  const CUSTOM_PIECES = [
+    { id: 'logo', label: 'Logo', x: 50, y: 13, w: 26, s: 1 },
+    { id: 'name', label: 'Name', x: 50, y: 26, w: 86, s: 1 },
+    { id: 'tagline', label: 'Tagline', x: 50, y: 31, w: 80, s: 1 },
+    { id: 'intro', label: 'Line above the title', x: 50, y: 38, w: 80, s: 1 },
+    { id: 'title', label: 'Title', x: 50, y: 44, w: 84, s: 1 },
+    { id: 'subtitle', label: 'Subtitle', x: 50, y: 50, w: 84, s: 1 },
+    { id: 'art', label: 'Picture', x: 50, y: 64, w: 34, s: 1 },
+    { id: 'middle', label: 'Performers or details', x: 50, y: 79, w: 80, s: 1 },
+    { id: 'quote', label: 'Verse', x: 50, y: 85, w: 80, s: 1 },
+    { id: 'date', label: 'Date', x: 50, y: 90, w: 80, s: 1 },
+    { id: 'footer', label: 'Extra text', x: 50, y: 94, w: 84, s: 1 },
+    { id: 'address', label: 'Address', x: 50, y: 97, w: 84, s: 1 }
+  ];
+  function normCustom(v) {
+    const out = {};
+    v = v && typeof v === 'object' ? v : {};
+    for (const p of CUSTOM_PIECES) {
+      const o = v[p.id] || {};
+      const num = (n, d, lo, hi) => (Number.isFinite(Number(n)) && n !== '' && n != null ? Math.max(lo, Math.min(hi, Number(n))) : d);
+      out[p.id] = { x: num(o.x, p.x, 0, 100), y: num(o.y, p.y, 0, 100), w: num(o.w, p.w, 8, 100), s: num(o.s, p.s, 0.4, 3), hide: !!o.hide };
+    }
+    return out;
+  }
 
   const COVER_DEFAULT_SHOW = { logo: true, name: true, tagline: true, date: true, address: false };
 
@@ -121,7 +169,8 @@
       middle: String(v.middle || ''), // performers or details under the title (Traditional layout)
       logoSize: ['small', 'medium', 'large'].includes(v.logoSize) ? v.logoSize : 'large',
       logoId: v.logoId ? Number(v.logoId) : '', // which of the organization's logos to show ('' = the main logo)
-      watermark: !!v.watermark // show the logo faintly behind the text
+      watermark: !!v.watermark, // show the logo faintly behind the text
+      custom: normCustom(v.custom) // positions for the "your own layout" style
     };
   }
 
@@ -180,8 +229,8 @@
     if (/^#\s+/.test(t)) return 'sec';
     if (/^>\s?/.test(t)) return 'rubric';
     if (/^\[notes(?:\s+\d+)?\]$/i.test(t)) return 'notes';
-    if (/^\[columns(?:\s+\d+)?\]$/i.test(t)) return 'cols-open';
-    if (/^\[\/columns\]$/i.test(t)) return 'cols-close';
+    if (/^\[(?:columns|table|scripture)\b[^\]]*\]$/i.test(t)) return 'cols-open'; // a block that runs until its closing tag
+    if (/^\[\/(?:columns|table|scripture)\]$/i.test(t)) return 'cols-close';
     if (/^\^\s?/.test(t)) return 'center';
     if (/^[-•]\s+/.test(t)) return 'bullet';
     const body = t.replace(/^\+\s+/, '');
@@ -260,6 +309,43 @@
     }
     return `<div class="cols" style="column-count:${n}">${out.join('')}</div>`;
   }
+  // A grid for announcements and calendars: [table] ... [/table]. One row per line, cells split by a tab
+  // (as pasted from Excel) or |. "[table header]" makes the first row a header; "# text" is a heading row.
+  function tableHtml(header, lines) {
+    const rows = lines.map((l) => l.trim()).filter(Boolean);
+    const cells = (r) => r.split(/\t|\|/).map((c) => c.trim());
+    const width = Math.max(1, ...rows.filter((r) => !/^#\s+/.test(r)).map((r) => cells(r).length));
+    let head = '';
+    let body = rows;
+    if (header && rows.length && !/^#\s+/.test(rows[0])) {
+      head = '<thead><tr>' + cells(rows[0]).map((c) => `<th>${inline(c)}</th>`).join('') + '</tr></thead>';
+      body = rows.slice(1);
+    }
+    const trs = body.map((r) => {
+      const h = r.match(/^#\s+(.*)$/);
+      if (h) return `<tr class="grp"><td colspan="${width}">${inline(h[1])}</td></tr>`;
+      const cs = cells(r);
+      while (cs.length < width) cs.push('');
+      return '<tr>' + cs.map((c) => `<td>${inline(c)}</td>`).join('') + '</tr>';
+    });
+    return `<table class="grid">${head}<tbody>${trs.join('')}</tbody></table>`;
+  }
+
+  // A Bible passage printed in the bulletin: [scripture Psalm 95:1-7] ... [/scripture].
+  // One verse per line (a leading number becomes a small verse number). Long passages split across pages.
+  function scriptureBlocks(ref, lines) {
+    const out = [];
+    if (ref) out.push({ type: 'scrip-ref', keepNext: true, html: `<div class="scrip-ref">${inline(ref)}</div>` });
+    const verses = lines.map((l) => l.trim()).filter(Boolean).map((l) => {
+      const m = l.match(/^(\d+)\s+(.*)$/);
+      return m ? `<sup class="vn">${m[1]}</sup>${inline(m[2])}` : inline(l);
+    });
+    for (let i = 0; i < verses.length; i += 3) {
+      out.push({ type: 'scrip', html: `<div class="scrip">${verses.slice(i, i + 3).join(' ')}</div>` });
+    }
+    return out;
+  }
+
   function parseBody(text) {
     const src = String(text || '').replace(/\r/g, '').split('\n');
     const blocks = [];
@@ -291,10 +377,21 @@
       flush();
     };
 
+    // Finish whichever block ([columns], [table] or [scripture]) is open.
+    const closeBlock = () => {
+      if (!cols) return;
+      if (cols.kind === 'table') {
+        for (let i = 0; i < cols.lines.length; i += 16) blocks.push({ type: 'table', html: tableHtml(cols.header, cols.lines.slice(i, i + 16)) });
+      } else if (cols.kind === 'scripture') {
+        blocks.push(...scriptureBlocks(cols.ref, cols.lines));
+      } else pushCols(cols.n, cols.lines);
+      cols = null;
+    };
+
     for (const raw of src) {
       const t = raw.trim();
       if (cols) {
-        if (/^\[\/columns\]$/i.test(t)) { pushCols(cols.n, cols.lines); cols = null; } else cols.lines.push(raw);
+        if (new RegExp('^\\[/' + cols.kind + '\\]$', 'i').test(t)) closeBlock(); else cols.lines.push(raw);
         continue;
       }
       if (!t) { endAll(); continue; }
@@ -303,7 +400,9 @@
       if (lastItem && /^\s{2,}\S/.test(raw) && classifyLine(t) === 'text') { lastItem.subs.push(t); continue; }
 
       let m;
-      if ((m = t.match(/^\[columns(?:\s+(\d+))?\]$/i))) { endAll(); cols = { n: Math.max(1, Math.min(4, Number(m[1] || 2))), lines: [] }; continue; }
+      if ((m = t.match(/^\[columns(?:\s+(\d+))?\]$/i))) { endAll(); cols = { kind: 'columns', n: Math.max(1, Math.min(4, Number(m[1] || 2))), lines: [] }; continue; }
+      if ((m = t.match(/^\[table(\s+header)?\]$/i))) { endAll(); cols = { kind: 'table', header: !!m[1], lines: [] }; continue; }
+      if ((m = t.match(/^\[scripture(?:\s+(.*))?\]$/i))) { endAll(); cols = { kind: 'scripture', ref: (m[1] || '').trim(), lines: [] }; continue; }
       if (/^={3,}$/.test(t)) { endAll(); blocks.push({ pageBreak: true }); continue; }
       if ((m = t.match(/^##\s+(.*)$/))) { endAll(); blocks.push({ type: 'sub', keepNext: true, html: `<h4 class="sub">${inline(m[1])}</h4>` }); continue; }
       if ((m = t.match(/^#\s+(.*)$/))) { endAll(); blocks.push({ type: 'sec', keepNext: true, html: `<h3 class="sec">${inline(m[1])}</h3>` }); continue; }
@@ -342,7 +441,7 @@
       }
     }
     endPara();
-    if (cols) pushCols(cols.n, cols.lines); // a [columns] block left open at the end
+    closeBlock(); // a block left open at the end
 
     // A centered line right under a heading (a dean's name, a presiding officer) stays with that heading.
     for (let i = 1; i < blocks.length; i++) {
@@ -415,6 +514,25 @@
     const name = cvName(ctx, cv), title = cvTitle(c), date = cvDate(c, cv), quote = cvQuote(cv), info = cvInfo(ctx, cv), pic = cvPic(ctx, cv);
     const rule = '<div class="rule"></div>';
     switch (cv.style) {
+      case 'custom': {
+        const inner = {
+          logo: cv.show.logo ? coverLogoImg(ctx) : '',
+          name: cv.show.name ? `<div class="org">${esc(ctx.org.name)}</div>` : '',
+          tagline: cv.show.tagline && ctx.org.tagline ? `<div class="tagline">${esc(ctx.org.tagline)}</div>` : '',
+          intro: cv.intro.trim() ? `<div class="cvintro">${inline(cv.intro.trim())}</div>` : '',
+          title: c.title ? `<h2>${esc(c.title)}</h2>` : '',
+          subtitle: c.subtitle ? `<div class="subtitle">${esc(c.subtitle)}</div>` : '',
+          art: cvArt(ctx, cv),
+          middle: cv.middle.trim() ? `<div class="cvmiddle">${cv.middle.trim().split('\n').map((l) => (l.trim() ? `<div>${inline(l.trim())}</div>` : '<div class="gap"></div>')).join('')}</div>` : '',
+          quote, date, footer: cvFoot(cv), address: cvAddr(ctx, cv)
+        };
+        const html = CUSTOM_PIECES.map((p) => {
+          const g = cv.custom[p.id];
+          if (!inner[p.id] || g.hide) return '';
+          return `<div class="cvx cvx-${p.id}" data-el="${p.id}" style="left:${g.x}%;top:${g.y}%;width:${g.w}%;font-size:${g.s}em">${inner[p.id]}</div>`;
+        }).join('');
+        return { cls: 'cv-custom', html };
+      }
       case 'traditional': {
         // Formal and centered, like a concert or commencement program: logo and name on top,
         // the title and the performers in the middle, place and date at the bottom.
@@ -446,17 +564,22 @@
     const b = coverBody(ctx, content);
     const wmUrl = ctx.coverLogoUrl || ctx.logoUrl;
     const wm = content.cover.watermark && wmUrl ? `<div class="cv-water"><img src="${wmUrl}" alt=""></div>` : '';
-    return panel('cover', 'cv ' + b.cls + ' emph-' + content.cover.emphasis + ' logo-' + content.cover.logoSize + (wm ? ' cv-wm' : ''), wm + b.html, { fit: true });
+    return panel('cover', 'cv ' + b.cls + ' emph-' + content.cover.emphasis + ' logo-' + content.cover.logoSize + (wm ? ' cv-wm' : ''), wm + b.html, { fit: content.cover.style !== 'custom' });
   }
 
-  function backBlock(ctx) {
+  // The back page. Returns the page's CSS class and its contents.
+  function backPage(ctx, content) {
     const { org } = ctx;
-    const rows = [org.address, org.phone, org.website, org.email].filter(Boolean);
-    return logoImg(ctx) +
-      `<div class="backname">${esc(org.name)}</div>` +
-      (org.tagline ? `<div class="tagline">${esc(org.tagline)}</div>` : '') +
-      '<div class="rule"></div>' +
-      '<div class="contact">' + rows.map((r) => `<div>${esc(r)}</div>`).join('') + '</div>';
+    const bk = content.back;
+    const rows = bk.show.contact ? [org.address, org.phone, org.website, org.email].filter(Boolean) : [];
+    const ident = (bk.show.logo ? logoImg(ctx) : '') +
+      (bk.show.name ? `<div class="backname">${esc(org.name)}</div>` : '') +
+      (bk.show.tagline && org.tagline ? `<div class="tagline">${esc(org.tagline)}</div>` : '') +
+      (rows.length ? ((bk.show.name || bk.show.logo) ? '<div class="rule"></div>' : '') + '<div class="contact">' + rows.map((r) => `<div>${esc(r)}</div>`).join('') + '</div>' : '');
+    if (bk.style === 'blank') return { cls: 'center', html: '' };
+    if (bk.style === 'name') return { cls: 'center', html: ident };
+    const text = parseBody(bk.text).filter((b) => !b.pageBreak).map((b) => b.html).join('');
+    return { cls: 'flow backflow', html: `<div class="backtext">${text}</div>` + (bk.style === 'announce' && ident ? `<div class="backfoot">${ident}</div>` : '') };
   }
 
   function panel(role, cls, innerHtml, opts) {
@@ -533,9 +656,12 @@
       });
     } else {
       const flow = done.length === 1 && done[0].length === 0 ? [] : done;
-      const notes = (num) => ({ role: 'notes', panel: panel('notes', 'flow', '<h3 class="sec">Notes</h3><div class="lines"></div>', { num }) });
+      const notes = (num) => (content.notesPage
+        ? { role: 'notes', panel: panel('notes', 'flow', '<h3 class="sec">Notes</h3><div class="lines"></div>', { num }) }
+        : { role: 'blank', panel: panel('blank', 'flow', '', {}) });
       const cover = { role: 'cover', panel: coverPanel(c, content) };
-      const back = { role: 'back', panel: panel('back', 'center', backBlock(c), { fit: true }) };
+      const bp = backPage(c, content);
+      const back = { role: 'back', panel: panel('back', bp.cls, bp.html, { fit: true }) };
       const flowPage = (list, num) => ({ role: 'flow', panel: panel('flow', 'flow', flowHtml(list), { num }) });
 
       if (geo.kind === 'trifold') {
@@ -576,5 +702,5 @@
     return overflow;
   }
 
-  return { PX_PER_IN, EM_IN, COVER_STYLES, normCover, coverPanel, geometry, impose, normContent, clearWeekly, insertFormatId, classifyLine, parseItemLine, formatItemLine, parseBody, paginate, sideHtml, pageHtml, fitAll, setVars, esc };
+  return { PX_PER_IN, EM_IN, COVER_STYLES, CUSTOM_PIECES, BACK_STYLES, normCustom, normBack, normCover, coverPanel, geometry, impose, normContent, clearWeekly, insertFormatId, classifyLine, parseItemLine, formatItemLine, parseBody, paginate, sideHtml, pageHtml, fitAll, setVars, esc };
 });

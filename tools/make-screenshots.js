@@ -82,7 +82,26 @@ app.on('browser-window-created', (_e, win) => {
       // 3. the cover designer
       await click('#coverOpen'); await sleep(900);
       await shot('ui-cover');
+      await ev(`document.querySelector('#cv_styles .cvStyle[data-id="custom"]').click()`); await sleep(900);
+      await ev(`document.querySelector('#cv_pieces .piece:nth-child(7)').click()`); await sleep(400);
+      await ev(`document.querySelector('#cv_pieceBtns [data-a="bigger"]').click()`); await sleep(700);
+      await shot('ui-cover-custom');
+      await ev(`document.querySelector('#cv_styles .cvStyle[data-id="picture"]').click()`); await sleep(400);
       await click('#cv_done'); await sleep(400);
+
+      // the back page designer
+      await click('#backOpen'); await sleep(700);
+      await ev(`document.querySelector('#bk_styles .cvStyle[data-id="announce"]').click()`); await sleep(500);
+      await ev(`(() => { const t = document.getElementById('bk_text'); t.value = '# Announcements\\n- Potluck after worship next Sunday\\n- Nursery volunteers are needed\\n- Pray for our missionaries this month\\n\\n# This week\\n[table]\\nToday | 9:00 AM | Sunday School\\nToday | 10:00 AM | Morning Worship\\nTuesday | 7:00 PM | Young Adults\\nWednesday | 10:00 AM | Women\\'s Bible Study\\n[/table]'; t.dispatchEvent(new Event('input')); })()`);
+      await sleep(900);
+      await shot('ui-back');
+      await click('#bk_done'); await sleep(300);
+
+      // lists, tables and Bible passages
+      await click('#namesOpen'); await sleep(500);
+      await ev(`(() => { const k = document.getElementById('nm_kind'); k.value = 'scripture'; k.dispatchEvent(new Event('change')); })()`); await sleep(300);
+      await shot('ui-insert');
+      await click('#nm_cancel'); await sleep(300);
 
       // 4. the fill-in sheet
       await click('#sheetOpen'); await sleep(900);
