@@ -109,13 +109,47 @@ function currentContent() {
   };
 }
 
+// The views the page navigation offers: each has the pages it shows and a plain label.
+function viewsFor(layout, geo) {
+  const n = layout.pages.length;
+  if (geo.kind === 'booklet' && state.navMode !== 'print') {
+    const v = [{ pages: [0], label: 'Front cover', sheetUnits: 1 }];
+    for (let i = 1; i < n - 1; i += 2) v.push({ pages: [i, i + 1], label: `Pages ${i + 1}–${i + 2}`, sheetUnits: 2 });
+    v.push({ pages: [n - 1], label: 'Back cover', sheetUnits: 1 });
+    return v;
+  }
+  return layout.sides.map((pages, i) => ({
+    pages, sideIdx: i,
+    label: geo.kind === 'flat' ? `Page ${i + 1}` : geo.kind === 'trifold' ? (i === 0 ? 'Outside' : 'Inside')
+      : `Sheet ${Math.floor(i / 2) + 1} · ${i % 2 === 0 ? 'Outside' : 'Inside'}`
+  }));
+}
+
+function renderPageNav(views, geo) {
+  const booklet = geo.kind === 'booklet';
+  $('pageNav').hidden = views.length < 2 && !booklet;
+  $('stepPrev').disabled = state.side === 0;
+  $('stepNext').disabled = state.side === views.length - 1;
+  $('navMode').hidden = !booklet;
+  $('navMode').textContent = state.navMode === 'print' ? 'Back to reading view' : 'See how it prints';
+  const chips = $('navChips');
+  chips.innerHTML = '';
+  views.forEach((v, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = v.label;
+    b.className = 'navChip' + (i === state.side ? ' on' : '');
+    b.onclick = () => { state.side = i; render(); };
+    chips.appendChild(b);
+  });
+}
 function render() {
   const has = state.org && state.tpl;
   $('empty').hidden = !!state.org;
   $('sheetWrap').hidden = !has;
   $('sizeLabel').hidden = !has;
   $('editor').hidden = !state.tpl;
-  if (!has) { $('fitWarn').hidden = true; $('stepper').hidden = true; return; }
+  if (!has) { $('fitWarn').hidden = true; $('pageNav').hidden = true; return; }
 
   const f = state.catalog.formats.find((x) => x.id === $('format').value);
   const c = state.catalog.colors.find((x) => x.id === $('color').value);
@@ -129,25 +163,25 @@ function render() {
   const cur = currentContent();
   const layout = Layout.paginate(document, geo, { org, content: cur, logoUrl: state.logoUrl, coverUrl: state.coverUrl, coverLogoUrl: state.coverLogoUrl, assetUrls: assetUrlsFor(cur) });
   state.layout = layout;
-  const nSides = layout.sides.length;
-  if (state.side >= nSides) state.side = nSides - 1;
+  // Page navigation. Booklets are read as a front cover, facing pages and a back cover;
+  // "See how it prints" switches to the printed sheets (outside and inside of each sheet).
+  const views = viewsFor(layout, geo);
+  state.views = views;
+  if (state.pendingPage != null) {
+    const at = views.findIndex((v) => v.pages.includes(state.pendingPage));
+    state.side = at >= 0 ? at : 0;
+    state.pendingPage = null;
+  }
+  if (state.side >= views.length) state.side = views.length - 1;
   if (state.side < 0) state.side = 0;
+  const view = views[state.side];
+  renderPageNav(views, geo);
 
-  // Stepper: browse every printed side. Hidden when there is only one.
-  $('stepper').hidden = nSides < 2;
-  $('stepPrev').disabled = state.side === 0;
-  $('stepNext').disabled = state.side === nSides - 1;
-  let sideName;
-  if (geo.kind === 'flat') sideName = `Page ${state.side + 1} of ${nSides}`;
-  else if (geo.kind === 'trifold') sideName = state.side === 0 ? 'Outside' : 'Inside';
-  else sideName = `Sheet ${Math.floor(state.side / 2) + 1} of ${nSides / 2} · ${state.side % 2 === 0 ? 'Outside' : 'Inside'}`;
-  $('stepLabel').textContent = sideName;
-
-  const stage = document.querySelector('.stage');
-  const toggleH = nSides > 1 ? 50 : 0;
-  const scale = Math.max(10, Math.min((stage.clientWidth - 64) / f.width, (stage.clientHeight - 110 - toggleH) / f.height));
+  const wrap = $('sheetWrap');
+  const sheetW = view.sheetUnits ? view.sheetUnits * geo.pageW : f.width;
+  const scale = Math.max(10, Math.min((wrap.clientWidth - 32) / sheetW, (wrap.clientHeight - 24) / f.height));
   const sheet = $('sheet');
-  sheet.style.width = f.width * scale + 'px';
+  sheet.style.width = sheetW * scale + 'px';
   sheet.style.height = f.height * scale + 'px';
   sheet.style.background = c.hex;
   sheet.style.fontSize = scale * 0.17 + 'px'; // same 0.17in-per-em ratio the PDF uses
@@ -155,7 +189,7 @@ function render() {
   const t = w.thickness;
   sheet.style.boxShadow = `0 ${t}px ${t * 2}px rgba(0,0,0,.35), ${t}px ${t * 1.5}px 0 rgba(0,0,0,.18), 0 ${t * 6}px ${t * 14}px rgba(0,0,0,.4)`;
 
-  sheet.innerHTML = Layout.sideHtml(layout, state.side);
+  sheet.innerHTML = view.sideIdx != null ? Layout.sideHtml(layout, view.sideIdx) : view.pages.map((i) => layout.pages[i].panel).join('');
   const fitOverflow = Layout.fitAll(sheet);
   $('fitWarn').hidden = !(fitOverflow || layout.overflow);
   $('fitWarn').textContent = geo.kind === 'trifold' && layout.overflow
@@ -1388,17 +1422,17 @@ function setBoxes(list) { state.tpl.content.boxes = list; onEdit(); renderBoxLis
 const selBox = () => getBoxes().find((b) => b.id === boxState.sel) || null;
 
 function visiblePageIndex() {
-  const l = state.layout;
-  if (!l) return 1;
-  const side = l.sides[Math.min(state.side, l.sides.length - 1)] || [0];
-  const flow = side.find((i) => !['cover', 'back'].includes(l.pages[i].role));
-  return flow != null ? flow : side[0];
+  const l = state.layout, vs = state.views;
+  if (!l || !vs || !vs.length) return 1;
+  const pages = vs[Math.min(state.side, vs.length - 1)].pages;
+  const flow = pages.find((i) => !['cover', 'back'].includes(l.pages[i].role));
+  return flow != null ? flow : pages[0];
 }
 
 function showPage(page) {
-  const l = state.layout;
-  if (!l) return;
-  const s = l.sides.findIndex((side) => side.includes(page));
+  const vs = state.views;
+  if (!vs) return;
+  const s = vs.findIndex((v) => v.pages.includes(page));
   if (s >= 0 && s !== state.side) { state.side = s; render(); }
 }
 
@@ -1411,7 +1445,7 @@ function renderBoxList() {
     const el = document.createElement('button');
     el.type = 'button';
     el.className = b.id === boxState.sel ? 'on' : '';
-    const what = b.kind === 'image' ? 'Picture' : 'Text: ' + (b.text.replace(/\s+/g, ' ').trim().slice(0, 24) || '(empty)');
+    const what = b.kind === 'image' ? 'Picture' : 'Text: ' + (b.text.replace(/^[#\-\s>^]+/, '').replace(/\s+/g, ' ').trim().slice(0, 24) || '(empty)');
     el.textContent = `Page ${b.page + 1} · ${what}`;
     el.onclick = () => { boxState.sel = b.id; showPage(b.page); renderBoxList(); render(); };
     host.appendChild(el);
@@ -1927,6 +1961,11 @@ async function init() {
     await refreshTemplates(made.id);
   };
 
+  $('navMode').onclick = () => {
+    state.pendingPage = visiblePageIndex();
+    state.navMode = state.navMode === 'print' ? 'read' : 'print';
+    render();
+  };
   $('stepPrev').onclick = () => { state.side -= 1; render(); };
   $('stepNext').onclick = () => { state.side += 1; render(); };
   // Insert-snippet buttons: put the sample text on its own line at the cursor.

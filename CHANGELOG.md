@@ -4,6 +4,14 @@ All notable changes to Program Publisher. Versions follow [Semantic Versioning](
 while the app is below 1.0, new features bump the middle number (0.2.0 → 0.3.0) and fixes bump the last (0.2.0 → 0.2.1).
 The version shows in the app under the title and in the installer file name.
 
+## 0.10.1 — 2026-11-09
+### Fixed
+- **Could not switch between the cover, inside pages and back cover.** The page buttons were being covered by the preview whenever the "check before printing" panel had several notes (which a brand-new program with no logo always does). The preview area now has its own space and can no longer overlap the controls.
+
+### Changed
+- **Simpler page navigation.** A booklet is now read as "Front cover · Pages 2–3 · Back cover" with one click on each. "See how it prints" switches to the printed sheets (outside and inside) and back.
+- The left panel is organized into four steps you can fold open and closed: About, The program, Paper and printing, and Boxes and pictures.
+
 ## 0.10.0 — 2026-11-09
 ### Added
 - **Check before printing:** a plain-language panel under the preview (sample text still showing, no title or date, text too small, a box off the page, empty pages). Saving a PDF asks you to confirm if something needs a look.

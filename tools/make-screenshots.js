@@ -79,6 +79,17 @@ app.on('browser-window-created', (_e, win) => {
       await sleep(1500);
       await shot('ui-editor');
 
+      // page navigation: front cover, inside pages, back cover, then the printed sheets
+      console.log('NAV', await ev(`[...document.querySelectorAll('#navChips .navChip')].map((b) => b.textContent).join(' | ')`));
+      await ev(`document.querySelector('#navChips .navChip:nth-child(2)').click()`); await sleep(500);
+      await shot('ui-pages');
+      await ev(`document.querySelector('#navChips .navChip:last-child').click()`); await sleep(400);
+      console.log('NAV-BACK', await ev(`document.querySelector('#sheet [data-role=back]') ? 'back shown' : 'NO BACK'`));
+      await ev(`document.getElementById('navMode').click()`); await sleep(500);
+      console.log('NAV-PRINT', await ev(`[...document.querySelectorAll('#navChips .navChip')].map((b) => b.textContent).join(' | ')`));
+      await ev(`document.getElementById('navMode').click()`); await sleep(400);
+      await ev(`document.querySelector('#navChips .navChip:first-child').click()`); await sleep(300);
+
       // a free text box on the back page, then undo and redo it
       await ev(`document.getElementById('boxPanel').open = true`); await sleep(300);
       await click('#boxAddText'); await sleep(600);
@@ -146,6 +157,38 @@ app.on('browser-window-created', (_e, win) => {
       await click('#orgManage'); await sleep(900);
       await ev(`document.getElementById('logoList').scrollIntoView({ block: 'center' })`); await sleep(500);
       await shot('ui-logos');
+      // end to end: the Literary Night program from the school wizard
+      await ev(`(window.confirm = () => true, document.getElementById('orgDialog').open && document.getElementById('orgDialog').close(), 0)`);
+      try {
+        await click('#homeBtn'); await sleep(400);
+        const fresh = main._db().createOrg({ name: 'Fresh Start Academy', kind: 'school' });
+        await ev(`(async () => { await refreshOrgs(${fresh.id}); })()`); await sleep(1800);
+        console.log('LIT start', await ev(`state.view + ' org=' + state.org.name + ' tpls=' + state.templates.length`));
+        await click('#newProgram'); await sleep(400);
+        console.log('LIT wiz1', (await ev(`document.getElementById('wizBody').innerText`)).slice(0, 120).replace(/\n/g, ' / '));
+        await ev(`[...document.querySelectorAll('#wizBody .choice')].find(b => /School program/.test(b.textContent)).click()`); await sleep(500);
+        console.log('LIT wiz2', (await ev(`document.getElementById('wizBody').innerText`)).slice(0, 160).replace(/\n/g, ' / '), await ev(`document.getElementById('wizNext').textContent`));
+        await ev(`document.querySelector('input[name="wq_kind"][value="showcase"]').click()`); await sleep(500);
+        for (let i = 0; i < 6; i++) {
+          if (await ev(`state.view === 'editor'`)) break;
+          await click('#wizNext'); await sleep(600);
+        }
+        console.log('LIT view', await ev(`state.view`), await ev(`state.tpl ? state.tpl.content.title : 'NO TEMPLATE'`));
+        await sleep(800);
+        console.log('LIT chips', await ev(`[...document.querySelectorAll('#navChips .navChip')].map(b => b.textContent).join(' | ')`));
+        await shot('lit-front');
+        console.log('LIT side before', await ev(`state.side`));
+        await ev(`document.querySelector('#navChips .navChip:nth-child(2)').click()`);
+        for (let k = 0; k < 4; k++) { await sleep(300); console.log('LIT side after', k, await ev(`state.side + ' views=' + (state.views || []).length + ' on=' + document.querySelector('#navChips .navChip.on').textContent`)); }
+        await shot('lit-inside');
+        console.log('LIT checks', (await ev(`document.getElementById('checks').innerText`)).replace(/\n/g, ' / '));
+        await ev(`document.querySelector('#navChips .navChip:last-child').click()`); await sleep(500);
+        await shot('lit-back');
+        console.log('LIT body', JSON.stringify((await ev(`state.tpl.content.body`)).slice(0, 400)));
+        await click('#sheetOpen'); await sleep(900);
+        await shot('lit-sheet');
+        await click('#sh_close'); await sleep(300);
+      } catch (e) { console.log('LIT-ERROR', e && e.message); }
       // PDF export with crop marks and as a one-sheet test page
       const tid = await ev('state.tpl.id');
       for (const [label, opts] of [['plain', {}], ['crop', { crop: true }], ['test', { test: true }]]) {

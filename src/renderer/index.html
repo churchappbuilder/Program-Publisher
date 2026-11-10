@@ -81,7 +81,7 @@
     </div>
 
     <div id="editor">
-      <h3>1. About this program</h3>
+      <details class="step" open><summary>1. About this program</summary>
       <label>Name in my list <input id="tplName" type="text"></label>
       <label class="coverField">Title on the cover <input id="title" type="text"></label>
       <label class="coverField">Subtitle <input id="subtitle" type="text"></label>
@@ -90,7 +90,9 @@
       <button type="button" id="coverOpen" class="btn wide coverField" title="Choose the layout, picture and details for the front cover">Design the cover…</button>
       <button type="button" id="backOpen" class="btn wide coverField" title="Choose what goes on the back page: announcements, the church's name and address, or your own text">Design the back page…</button>
 
-      <h3 id="step2Title">2. This week's service</h3>
+      </details>
+
+      <details class="step" open><summary id="step2Title">2. This week's service</summary>
       <button type="button" id="sheetOpen" class="btn primary wide" title="Type each week's hymn numbers, readings and names, or paste them from Excel">Fill in the order of service…</button>
       <button type="button" id="namesOpen" class="btn wide" title="Add a bulleted list, a table, a list of names in columns, or a Bible passage">Add a list, table or Bible passage…</button>
       <p class="hint" id="sheetHint">Type the hymn numbers, readings and names. You can also paste them from Excel.</p>
@@ -153,7 +155,9 @@ Plain lines make a paragraph; line breaks are kept.</pre>
         </details>
       </details>
 
-      <h3>3. Paper</h3>
+      </details>
+
+      <details class="step" id="stepPaper"><summary>3. Paper and printing</summary>
       <label>Paper size and fold <select id="format"></select></label>
       <p id="formatNote" class="hint"></p>
       <label>Paper color <select id="color"></select></label>
@@ -165,8 +169,23 @@ Plain lines make a paragraph; line breaks are kept.</pre>
       <label class="check coverField"><input id="notesPage" type="checkbox"> Fill spare pages with a Notes page</label>
       <p class="hint coverField">A folded booklet always has a multiple of four pages. Turn this off to leave spare pages blank, for a loose insert or more announcements.</p>
 
-      <details class="adv" id="boxPanel">
-        <summary>Boxes and pictures on a page</summary>
+      <details class="adv">
+        <summary>More saving options</summary>
+        <label>How to arrange the pages
+          <select id="exportMode">
+            <option value="sheets">Ready to print and fold</option>
+            <option value="pages">One page at a time, in reading order</option>
+          </select>
+        </label>
+        <label class="check"><input id="exportColor" type="checkbox"> Show the paper color in the PDF</label>
+        <label class="check"><input id="exportCrop" type="checkbox"> Add crop marks (for cutting)</label>
+        <button type="button" id="testPrint" class="btn wide" title="Print the first sheet at true size to check your printer before a big run">Print a test page…</button>
+        <p class="hint">Leave this off when you print on colored paper.</p>
+      </details>
+      </details>
+
+      <details class="step" id="boxPanel">
+        <summary>4. Boxes and pictures on a page</summary>
         <p class="hint">Place a text box or a picture anywhere on a page, like in a page-layout program. Drag it in the preview and pull the corner to resize.</p>
         <div class="row">
           <button type="button" id="boxAddText" class="btn grow">Add a text box</button>
@@ -192,29 +211,18 @@ Plain lines make a paragraph; line breaks are kept.</pre>
         </div>
       </details>
 
-      <details class="adv">
-        <summary>More saving options</summary>
-        <label>How to arrange the pages
-          <select id="exportMode">
-            <option value="sheets">Ready to print and fold</option>
-            <option value="pages">One page at a time, in reading order</option>
-          </select>
-        </label>
-        <label class="check"><input id="exportColor" type="checkbox"> Show the paper color in the PDF</label>
-        <label class="check"><input id="exportCrop" type="checkbox"> Add crop marks (for cutting)</label>
-        <button type="button" id="testPrint" class="btn wide" title="Print the first sheet at true size to check your printer before a big run">Print a test page…</button>
-        <p class="hint">Leave this off when you print on colored paper.</p>
-      </details>
+
     </div>
   </aside>
 
   <main class="stage">
     <button type="button" id="savePdf" class="btn primary big" title="Save this program as a PDF you can print or email">Save as PDF…</button>
     <div id="empty" class="empty" hidden>Create an organization to get started.</div>
-    <div id="stepper" class="toggle" hidden>
-      <button type="button" id="stepPrev" title="Previous page of the printout">◀</button>
-      <span id="stepLabel" class="stepLabel"></span>
-      <button type="button" id="stepNext" title="Next page of the printout">▶</button>
+    <div id="pageNav" class="pageNav" hidden>
+      <button type="button" id="stepPrev" class="navArrow" title="Previous page">◀</button>
+      <div id="navChips" class="navChips"></div>
+      <button type="button" id="stepNext" class="navArrow" title="Next page">▶</button>
+      <button type="button" id="navMode" class="navMode" title="Switch between reading the pages in order and seeing how the sheets print and fold">See how it prints</button>
     </div>
     <div id="sheetWrap">
       <div id="sheet" class="sheet preview"></div>
